@@ -2,6 +2,16 @@
 #include <iostream>
 using namespace std;
 
+void Move() {}
+
+void MoveQueue() {}
+
+void PriorityMoveQueue() {}
+
+void ActionStack() {}
+
+void BattleSystem() {}
+
 int main() {
 
 }
