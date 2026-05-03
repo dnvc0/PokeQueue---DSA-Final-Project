@@ -90,7 +90,9 @@ void PriorityMoveQueue() {}
 
 void ActionStack() {}
 
-void BattleSystem() {}
+void BattleSystem() {
+    clearScreen();
+}
 
 int main() {
     cout << "================Welcome to PokeQueue!====================" << endl;
