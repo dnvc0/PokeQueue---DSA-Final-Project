@@ -1,10 +1,9 @@
 // main file for PokeQueue - DSA Final Project
 #include <iostream>
 #include <cstdlib>  
-#include <vector>
-#include <stack>
 #include <queue>
-#include <ctime> 
+#include <stack>
+#include <ctime>
 #include <string>   
 using namespace std;
 
@@ -48,6 +47,14 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         bool isFainted;
         Move moveSet[4];
     public:
+        Pokemon() {
+            name = "";
+            hp = 0;
+            speed = 0;
+            isAlive = false;
+            isFainted = true;
+        }
+
         Pokemon(string n, int h, int s) {
             name = n;
             hp = h;
@@ -113,14 +120,14 @@ void BattleSystem() {
         enemy.setMove(3, Move("Slash", 2, 15));
     }
     else if (randEnemy == 1) {
-        enemy = Pokemon("Squirtle", 110, 50);
+        enemy = Pokemon("Squirtle", 100, 50);
         enemy.setMove(0, Move("Tackle", 1, 10));
         enemy.setMove(1, Move("Water Gun", 1, 20));
         enemy.setMove(2, Move("Bubble", 1, 18));
         enemy.setMove(3, Move("Aqua Jet", 2, 15));
     }
     else {
-        enemy = Pokemon("Bulbasaur", 120, 45);
+        enemy = Pokemon("Bulbasaur", 100, 45);
         enemy.setMove(0, Move("Tackle", 1, 10));
         enemy.setMove(1, Move("Vine Whip", 1, 20));
         enemy.setMove(2, Move("Razor Leaf", 1, 18));
@@ -204,6 +211,21 @@ void BattleSystem() {
 
         cout << "--- Turn End ---\n";
         system("pause");
+    }
+
+    // ===== RESULT =====
+    cout << "\n=== RESULT ===\n";
+    if (player.getIsAlive()) cout << "You Win!\n";
+    else cout << "You Lose!\n";
+
+    // ===== HISTORY =====
+    cout << "\n=== ACTION HISTORY (LATEST FIRST) ===\n";
+    while (!history.empty()) {
+        cout << history.top() << endl;
+        history.pop();
+    }
+
+    system("pause");
 }
 
 int main() {
