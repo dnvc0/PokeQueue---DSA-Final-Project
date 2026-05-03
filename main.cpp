@@ -1,10 +1,9 @@
-// main file for PokeQueue - DSA Final Project
+// main file for PokeQueue - DSA Final Project 
 #include <iostream>
 #include <cstdlib>  
-#include <vector>
+#include <queue>
 #include <stack>
 #include <ctime>
-#include <queue>
 #include <string>   
 using namespace std;
 
@@ -48,6 +47,14 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         bool isFainted;
         Move moveSet[4];
     public:
+        Pokemon() {
+            name = "";
+            hp = 0;
+            speed = 0;
+            isAlive = false;
+            isFainted = true;
+        }
+
         Pokemon(string n, int h, int s) {
             name = n;
             hp = h;
@@ -93,6 +100,132 @@ void ActionStack() {}
 void BattleSystem() {
     clearScreen();
     cout << "=== 1v1 BATTLE START ===\n";
+
+    // ===== PLAYER POKEMON =====
+    Pokemon player("Pikachu", 100, 90);
+    player.setMove(0, Move("Quick Attack", 2, 15));
+    player.setMove(1, Move("Thunderbolt", 1, 25));
+    player.setMove(2, Move("Iron Tail", 1, 20));
+    player.setMove(3, Move("Electro Ball", 1, 18));
+
+    // ===== RANDOM ENEMY =====
+    Pokemon enemy;
+    int randEnemy = rand() % 3;
+
+    if (randEnemy == 0) {
+        enemy = Pokemon("Charmander", 100, 65);
+        enemy.setMove(0, Move("Scratch", 1, 10));
+        enemy.setMove(1, Move("Ember", 1, 20));
+        enemy.setMove(2, Move("Flame Burst", 1, 18));
+        enemy.setMove(3, Move("Slash", 2, 15));
+    }
+    else if (randEnemy == 1) {
+        enemy = Pokemon("Squirtle", 100, 50);
+        enemy.setMove(0, Move("Tackle", 1, 10));
+        enemy.setMove(1, Move("Water Gun", 1, 20));
+        enemy.setMove(2, Move("Bubble", 1, 18));
+        enemy.setMove(3, Move("Aqua Jet", 2, 15));
+    }
+    else {
+        enemy = Pokemon("Bulbasaur", 100, 45);
+        enemy.setMove(0, Move("Tackle", 1, 10));
+        enemy.setMove(1, Move("Vine Whip", 1, 20));
+        enemy.setMove(2, Move("Razor Leaf", 1, 18));
+        enemy.setMove(3, Move("Quick Attack", 2, 15));
+    }
+
+    // ===== STACK (HISTORY) =====
+    stack<string> history;
+
+    // ===== BATTLE LOOP =====
+    while (player.getIsAlive() && enemy.getIsAlive()) {
+        clearScreen();
+
+        cout << "=== BATTLE ===\n\n";
+
+        cout << "Your Pokemon: ";
+        player.displayPokemon();
+
+        cout << "Enemy Pokemon: ";
+        enemy.displayPokemon();
+
+        // ===== PLAYER MOVE =====
+        cout << "\nChoose Move:\n";
+        for (int i = 0; i < 4; i++) {
+            cout << i + 1 << ". ";
+            player.getMove(i).displayMove();
+        }
+
+        int choice;
+        cin >> choice;
+
+        if (choice < 1 || choice > 4) {
+            cout << "Invalid move!\n";
+            system("pause");
+            continue;
+        }
+
+        Move playerMove = player.getMove(choice - 1);
+
+        // ===== RANDOM ENEMY MOVE =====
+        Move enemyMove = enemy.getMove(rand() % 4);
+
+        cout << "\n--- Turn Start ---\n";
+
+        // ===== PRIORITY + SPEED LOGIC =====
+        bool playerFirst;
+
+        if (playerMove.getPriority() > enemyMove.getPriority()) {
+            playerFirst = true;
+        }
+        else if (playerMove.getPriority() < enemyMove.getPriority()) {
+            playerFirst = false;
+        }
+        else {
+            // same priority → check speed
+            playerFirst = player.getSpeed() >= enemy.getSpeed();
+        }
+
+        // ===== EXECUTION =====
+        if (playerFirst) {
+            cout << player.getName() << " used " << playerMove.getName() << "!\n";
+            enemy.takeDamage(playerMove.getDamage());
+            history.push(player.getName() + " used " + playerMove.getName());
+
+            if (enemy.getIsAlive()) {
+                cout << enemy.getName() << " used " << enemyMove.getName() << "!\n";
+                player.takeDamage(enemyMove.getDamage());
+                history.push(enemy.getName() + " used " + enemyMove.getName());
+            }
+        } else {
+            cout << enemy.getName() << " used " << enemyMove.getName() << "!\n";
+            player.takeDamage(enemyMove.getDamage());
+            history.push(enemy.getName() + " used " + enemyMove.getName());
+
+            if (player.getIsAlive()) {
+                cout << player.getName() << " used " << playerMove.getName() << "!\n";
+                enemy.takeDamage(playerMove.getDamage());
+                history.push(player.getName() + " used " + playerMove.getName());
+            }
+        }
+
+        cout << "--- Turn End ---\n";
+        system("pause");
+    }
+
+    // ===== RESULT =====
+    cout << "\n=== RESULT ===\n";
+    if (player.getIsAlive()) cout << "You Win!\n";
+    else cout << "You Lose!\n";
+
+    // ===== HISTORY =====
+    cout << "\n=== ACTION HISTORY (LATEST FIRST) ===\n";
+    while (!history.empty()) {
+        cout << history.top() << endl;
+        history.pop();
+    }
+
+    system("pause");
 }
 
 int main() {
@@ -134,5 +267,6 @@ int main() {
         }
     }
 
+    srand(time(0));
     return 0;
 }
