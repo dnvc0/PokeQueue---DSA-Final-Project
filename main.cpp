@@ -130,19 +130,7 @@ void ActionStack(stack<string> &history, const string &action) {
     history.push(action);
 }
 
-void BattleSystem() {
-    clearScreen();
-    cout << "=== 1v1 BATTLE START ===\n";
-
-    // ===== PLAYER POKEMON =====
-    Pokemon player("Pikachu", 100, 90);
-    player.setMove(0, Move("Quick Attack", 2, 15));
-    player.setMove(1, Move("Thunderbolt", 1, 25));
-    player.setMove(2, Move("Iron Tail", 1, 20));
-    player.setMove(3, Move("Electro Ball", 1, 18));
-
-    // ===== RANDOM ENEMY =====
-    Pokemon enemy;
+void createRandomEnemy(Pokemon &enemy) {
     int randEnemy = rand() % 3;
 
     if (randEnemy == 0) {
@@ -166,6 +154,22 @@ void BattleSystem() {
         enemy.setMove(2, Move("Razor Leaf", 1, 18));
         enemy.setMove(3, Move("Quick Attack", 2, 15));
     }
+}
+
+void BattleSystem() {
+    clearScreen();
+    cout << "=== 1v1 BATTLE START ===\n";
+
+    // ===== PLAYER POKEMON =====
+    Pokemon player("Pikachu", 100, 90);
+    player.setMove(0, Move("Quick Attack", 2, 15));
+    player.setMove(1, Move("Thunderbolt", 1, 25));
+    player.setMove(2, Move("Iron Tail", 1, 20));
+    player.setMove(3, Move("Electro Ball", 1, 18));
+
+    // ===== RANDOM ENEMY =====
+    Pokemon enemy;
+    createRandomEnemy(enemy);
 
     // ===== STACK (HISTORY) =====
     stack<string> history;
