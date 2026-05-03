@@ -4,7 +4,8 @@
 #include <queue>
 #include <stack>
 #include <ctime>
-#include <string>   
+#include <string> 
+#include <conio.h>  
 using namespace std;
 
 void clearScreen() {
@@ -34,7 +35,7 @@ class Move {
         int getDamage() const {return damage;}
 
         void displayMove() const {
-            cout << moveName << " (Priority: " << prioLvl << ", Damage: " << damage << ")" << endl;
+            cout << moveName << "\t(Priority: " << prioLvl << ", Damage: " << damage << ")" << endl;
         }
 };
 
@@ -42,6 +43,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
     private:
         string name;
         int hp;
+        int maxHP;
         int speed;
         bool isAlive;
         bool isFainted;
@@ -50,6 +52,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         Pokemon() {
             name = "";
             hp = 0;
+            maxHP = 0;
             speed = 0;
             isAlive = false;
             isFainted = true;
@@ -58,6 +61,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         Pokemon(string n, int h, int s) {
             name = n;
             hp = h;
+            maxHP = h;
             speed = s;
             isAlive = true;
             isFainted = false;
@@ -65,20 +69,17 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
 
         string getName() const {return name;}
         int getHP() const {return hp;}
+        int getMaxHP() const {return maxHP;}
         int getSpeed() const {return speed;}
         bool getIsAlive() const {return isAlive;}
         Move getMove(int index) const {return moveSet[index];}
-
-        void displayPokemon() const {
-            cout << name << " (HP: " << hp << ", Speed: " << speed << ")" << endl;
-        }
 
         void takeDamage(int dmg) {
             hp -= dmg;
             if (hp <= 0) {
                 hp = 0;
                 isAlive = false;
-                cout << name << " has been defeated!" << endl;
+                cout << "> KO! " << name << " has been defeated!" << endl;
             }
         }
 
@@ -93,11 +94,14 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
 
 void MoveQueue(Pokemon &player, Pokemon &enemy, Move &playerMove, Move &enemyMove) {
     while (true) {
-        cout << "\nChoose Move:\n";
+        cout << endl;
+        cout << string(42, '-') << endl;
+        cout << "Choose Move:\n";
         for (int i = 0; i < 4; i++) {
             cout << i + 1 << ". ";
             player.getMove(i).displayMove();
         }
+        cout << string(42, '-') << endl;
 
         int choice;
         cin >> choice;
@@ -156,10 +160,17 @@ void createRandomEnemy(Pokemon &enemy) {
     }
 }
 
-void BattleSystem() {
-    clearScreen();
-    cout << "=== 1v1 BATTLE START ===\n";
+void displayHPBar(int hp, int maxHP, int speed) {
+    int bars = (hp * 20) / maxHP;
+    cout << "HP: [";
+    for (int i = 0; i < 20; i++) {
+        if (i < bars) cout << "#";
+        else cout << "-";
+    }
+    cout << "] " << hp << "/" << maxHP << " Speed: " << speed << endl;
+}
 
+void BattleSystem() {
     // ===== PLAYER POKEMON =====
     Pokemon player("Pikachu", 100, 90);
     player.setMove(0, Move("Quick Attack", 2, 15));
@@ -177,21 +188,27 @@ void BattleSystem() {
     // ===== BATTLE LOOP =====
     while (player.getIsAlive() && enemy.getIsAlive()) {
         clearScreen();
+        cout << string(48, '-') << endl;
+        cout << " ______ _______ _______ _______ _____   _______" << endl; 
+        cout << "|   __ \\   _   |_     _|_     _|     |_|    ___|" << endl;
+        cout << "|   __ <       | |   |   |   | |       |    ___|" << endl;
+        cout << "|______/___|___| |___|   |___| |_______|_______|" << endl;
+        cout << string(48, '-') << endl;
 
-        cout << "=== BATTLE ===\n\n";
+        cout << "\nYOUR POKEMON: \n";
+        cout << player.getName() << endl;
+        displayHPBar(player.getHP(), player.getMaxHP(), player.getSpeed());
 
-        cout << "Your Pokemon: ";
-        player.displayPokemon();
-
-        cout << "Enemy Pokemon: ";
-        enemy.displayPokemon();
+        cout << "\nENEMY POKEMON: \n";
+        cout << enemy.getName() << endl;
+        displayHPBar(enemy.getHP(), enemy.getMaxHP(), enemy.getSpeed());
 
         // ===== PLAYER MOVE =====
         Move playerMove;
         Move enemyMove;
         MoveQueue(player, enemy, playerMove, enemyMove);
 
-        cout << "\n--- Turn Start ---\n";
+        cout << endl << string(15, '-') << " Turn Start " << string(15, '-') << endl;
 
         // ===== PRIORITY + SPEED LOGIC =====
         bool playerFirst;
@@ -199,64 +216,72 @@ void BattleSystem() {
 
         // ===== EXECUTION =====
         if (playerFirst) {
-            cout << player.getName() << " used " << playerMove.getMoveName() << "!\n";
+            cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
             enemy.takeDamage(playerMove.getDamage());
-            history.push(player.getName() + " used " + playerMove.getMoveName());
+            history.push("> " + player.getName() + " used " + playerMove.getMoveName());
 
             if (enemy.getIsAlive()) {
-                cout << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
+                cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
                 player.takeDamage(enemyMove.getDamage());
-                history.push(enemy.getName() + " used " + enemyMove.getMoveName());
+                history.push("> " + enemy.getName() + " used " + enemyMove.getMoveName());
             }
         } else {
-            cout << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
+            cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
             player.takeDamage(enemyMove.getDamage());
-            history.push(enemy.getName() + " used " + enemyMove.getMoveName());
+            history.push("> " + enemy.getName() + " used " + enemyMove.getMoveName());
 
             if (player.getIsAlive()) {
-                cout << player.getName() << " used " << playerMove.getMoveName() << "!\n";
+                cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
                 enemy.takeDamage(playerMove.getDamage());
-                history.push(player.getName() + " used " + playerMove.getMoveName());
+                history.push("> " + player.getName() + " used " + playerMove.getMoveName());
             }
         }
 
-        cout << "--- Turn End ---\n";
+        cout << string(15, '-') << "  Turn End  " << string(15, '-') << "\n\n";
         system("pause");
     }
 
     // ===== RESULT =====
-    cout << "\n=== RESULT ===\n";
+    cout << endl << string(16, '-') << " RESULT  " << string(17, '-') << endl;
     if (player.getIsAlive()) cout << "You Win!\n";
     else cout << "You Lose!\n";
 
     // ===== HISTORY =====
-    cout << "\n=== ACTION HISTORY (LATEST FIRST) ===\n";
+    cout << endl << string(16, '-') << " HISTORY " << string(17, '-') << endl;
     while (!history.empty()) {
         cout << history.top() << endl;
         history.pop();
     }
 
+    cout << endl;
     system("pause");
 }
 
 int main() {
-    cout << "================Welcome to PokeQueue!====================" << endl;
-    cout << "This is a turn-based battle system inspired by Pokemon." << endl;
-    cout << "In this game, you will create a team of Pokemon and battle against other trainers." << endl;
-    cout << "Do you want to start a new game? (y/n)" << endl;
-    char choice;
-    cin >> choice;
-    if (choice == 'y') {
-        cout << "Great! Let's get started!" << endl;
-    } else {
-        cout << "Maybe next time!" << endl;
-        return 0;
-    }
+    srand(time(0));
+
+    cout << string(81, '=') << endl;
+    cout << " _______  _______  ___   _  _______  _______  __   __  _______  __   __  _______ " << endl;
+    cout << "|       ||       ||   | | ||       ||       ||  | |  ||       ||  | |  ||       |" << endl;
+    cout << "|    _  ||   _   ||   |_| ||    ___||   _   ||  | |  ||    ___||  | |  ||    ___|" << endl;
+    cout << "|   |_| ||  | |  ||      _||   |___ |  | |  ||  |_|  ||   |___ |  |_|  ||   |___ " << endl;
+    cout << "|    ___||  |_|  ||     |_ |    ___||  |_|  ||       ||    ___||       ||    ___|" << endl;
+    cout << "|   |    |       ||    _  ||   |___ |      | |       ||   |___ |       ||   |___ " << endl;
+    cout << "|___|    |_______||___| |_||_______||____||_||_______||_______||_______||_______|" << endl;
+    cout << string(81, '=') << endl;
+    cout << "\nThis is a turn-based battle system inspired by Pokemon." << endl;
+    cout << "In this game, you will choose a pokemon to duel against an enemy pokemon." << endl;
+    cout << "\nPress any key to start..." << endl;
+    _getch();
 
     while (true) {
         clearScreen();
-        cout << "MAIN MENU" << endl;
-        cout << "1. New Battle" << endl;
+        cout << "              _                                 " << endl;
+        cout << "  /\\/\\   __ _(_)_ __     /\\/\\   ___ _ __  _   _ " << endl;
+        cout << " /    \\ / _` | | '_ \\   /    \\ / _ \\ '_ \\| | | |" << endl;
+        cout << "/ /\\/\\ \\ (_| | | | | | / /\\/\\ \\  __/ | | | |_| |" << endl;
+        cout << "\\/    \\/\\__,_|_|_| |_| \\/    \\/\\___|_| |_|\\__,_|" << endl;
+        cout << "\n1. New Battle" << endl;
         cout << "2. How to Play" << endl;
         cout << "3. Exit game" << endl;
         int option;
@@ -267,8 +292,15 @@ int main() {
                 // tapos may random enemy pokemon na lalaban sa player and then:
                 BattleSystem();
                 break;
-            case 2:
-                cout << "How to Play:" << endl; // instructions dito
+            case 2:                                                             
+                cout << " _____ _____ _ _ _    _____ _____    _____ __    _____ __ __ " << endl;
+                cout << "|  |  |     | | | |  |_   _|     |  |  _  |  |  |  _  |  |  |" << endl;
+                cout << "|     |  |  | | | |    | | |  |  |  |   __|  |__|     |_   _|" << endl;
+                cout << "|__|__|_____|_____|    |_| |_____|  |__|  |_____|__|__| |_|  " << endl;
+                cout << "\n1. Choose a Pokemon to battle against an enemy Pokemon." << endl;
+                cout << "2. Each turn, you and the enemy will use moves to attack each other." << endl;
+                cout << "3. The goal is to reduce the enemy's HP to 0 before your Pokemon's HP reaches 0.\n\n";
+                system("pause");
                 break;
             case 3:
                 cout << "Thanks for playing!" << endl;
@@ -278,6 +310,5 @@ int main() {
         }
     }
 
-    srand(time(0));
     return 0;
 }
