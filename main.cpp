@@ -29,7 +29,7 @@ class Move {
             damage = dmg;
         }
 
-        string getName() const {return moveName;}
+        string getMoveName() const {return moveName;}
         int getPriority() const {return prioLvl;}
         int getDamage() const {return damage;}
 
@@ -199,24 +199,24 @@ void BattleSystem() {
 
         // ===== EXECUTION =====
         if (playerFirst) {
-            cout << player.getName() << " used " << playerMove.getName() << "!\n";
+            cout << player.getName() << " used " << playerMove.getMoveName() << "!\n";
             enemy.takeDamage(playerMove.getDamage());
-            history.push(player.getName() + " used " + playerMove.getName());
+            history.push(player.getName() + " used " + playerMove.getMoveName());
 
             if (enemy.getIsAlive()) {
-                cout << enemy.getName() << " used " << enemyMove.getName() << "!\n";
+                cout << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
                 player.takeDamage(enemyMove.getDamage());
-                history.push(enemy.getName() + " used " + enemyMove.getName());
+                history.push(enemy.getName() + " used " + enemyMove.getMoveName());
             }
         } else {
-            cout << enemy.getName() << " used " << enemyMove.getName() << "!\n";
+            cout << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
             player.takeDamage(enemyMove.getDamage());
-            history.push(enemy.getName() + " used " + enemyMove.getName());
+            history.push(enemy.getName() + " used " + enemyMove.getMoveName());
 
             if (player.getIsAlive()) {
-                cout << player.getName() << " used " << playerMove.getName() << "!\n";
+                cout << player.getName() << " used " << playerMove.getMoveName() << "!\n";
                 enemy.takeDamage(playerMove.getDamage());
-                history.push(player.getName() + " used " + playerMove.getName());
+                history.push(player.getName() + " used " + playerMove.getMoveName());
             }
         }
 
