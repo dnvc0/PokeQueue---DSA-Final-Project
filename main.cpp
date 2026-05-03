@@ -1,6 +1,10 @@
 // main file for PokeQueue - DSA Final Project
 #include <iostream>
 #include <cstdlib>  
+#include <vector>
+#include <stack>
+#include <queue>
+#iclude <ctime> 
 #include <string>   
 using namespace std;
 
@@ -88,114 +92,118 @@ void ActionStack() {}
 
 void BattleSystem() {
     clearScreen();
-    cout << "=== TEAM BATTLE START ===\n";
+    cout << "=== 1v1 BATTLE START ===\n";
 
-    // player set up
-    Team playerTeam;
+    // ===== PLAYER POKEMON =====
+    Pokemon player("Pikachu", 100, 90);
+    player.setMove(0, Move("Quick Attack", 2, 15));
+    player.setMove(1, Move("Thunderbolt", 1, 25));
+    player.setMove(2, Move("Iron Tail", 1, 20));
+    player.setMove(3, Move("Electro Ball", 1, 18));
 
-    // TODO: assign kayo pokemon dito
-    // Example:
-    // Pokemon p1("Name", HP, Speed);
-    // p1.setMove(0, Move("Move1", priority, damage));
-    // p1.setMove(1, Move("Move2", priority, damage));
-    // playerTeam.setPokemon(0, p1);
+    // ===== RANDOM ENEMY =====
+    Pokemon enemy;
+    int randEnemy = rand() % 3;
 
-    // TEMP PLACEHOLDER
-    for (int i = 0; i < 6; i++) {
-        Pokemon temp;
-        playerTeam.setPokemon(i, temp);
+    if (randEnemy == 0) {
+        enemy = Pokemon("Charmander", 100, 65);
+        enemy.setMove(0, Move("Scratch", 1, 10));
+        enemy.setMove(1, Move("Ember", 1, 20));
+        enemy.setMove(2, Move("Flame Burst", 1, 18));
+        enemy.setMove(3, Move("Slash", 2, 15));
+    }
+    else if (randEnemy == 1) {
+        enemy = Pokemon("Squirtle", 110, 50);
+        enemy.setMove(0, Move("Tackle", 1, 10));
+        enemy.setMove(1, Move("Water Gun", 1, 20));
+        enemy.setMove(2, Move("Bubble", 1, 18));
+        enemy.setMove(3, Move("Aqua Jet", 2, 15));
+    }
+    else {
+        enemy = Pokemon("Bulbasaur", 120, 45);
+        enemy.setMove(0, Move("Tackle", 1, 10));
+        enemy.setMove(1, Move("Vine Whip", 1, 20));
+        enemy.setMove(2, Move("Razor Leaf", 1, 18));
+        enemy.setMove(3, Move("Quick Attack", 2, 15));
     }
 
-    // empty setup
-    Pokemon enemy;
-
-    // TODO: define nyo yung enemy pokemon dito
-    // Example:
-    // enemy = Pokemon("EnemyName", HP, Speed);
-    // enemy.setMove(0, Move("Move1", priority, damage));
-
-    // stack history
+    // ===== STACK (HISTORY) =====
     stack<string> history;
 
-    // loop
-    while (playerTeam.hasAlivePokemon() && enemy.getIsAlive()) {
-        Pokemon& player = playerTeam.getCurrentPokemon();
-
+    // ===== BATTLE LOOP =====
+    while (player.getIsAlive() && enemy.getIsAlive()) {
         clearScreen();
-        cout << "=== BATTLE ===\n";
 
-        cout << "\nYour Active Pokemon: ";
+        cout << "=== BATTLE ===\n\n";
+
+        cout << "Your Pokemon: ";
         player.displayPokemon();
 
         cout << "Enemy Pokemon: ";
         enemy.displayPokemon();
 
-        cout << "\n1. Attack\n2. Switch\nChoose: ";
-        int option;
-        cin >> option;
+        // ===== PLAYER MOVE =====
+        cout << "\nChoose Move:\n";
+        for (int i = 0; i < 4; i++) {
+            cout << i + 1 << ". ";
+            player.getMove(i).displayMove();
+        }
 
-        // swithcing pokemon
-        if (option == 2) {
-            playerTeam.switchPokemon();
+        int choice;
+        cin >> choice;
+
+        if (choice < 1 || choice > 4) {
+            cout << "Invalid move!\n";
+            system("pause");
             continue;
         }
 
-        // move selection
-        cout << "\nChoose Move:\n";
+        Move playerMove = player.getMove(choice - 1);
 
-        // TODO: Replace with actual moves later
-        cout << "1. [Move Slot 1]\n";
-        cout << "2. [Move Slot 2]\n";
-
-        int moveChoice;
-        cin >> moveChoice;
-
-        Move playerMove; // EMPTY muna
-        Move enemyMove;  // EMPTY muna
-
-        // TODO: Replace with actual move retrieval
-        // playerMove = player.getMove(moveChoice - 1);
-        // enemyMove = enemy.getMove(rand() % 2);
-
-        // priority queue for turn order
-        priority_queue<Move, vector<Move>, CompareMove> turnQueue;
-        turnQueue.push(playerMove);
-        turnQueue.push(enemyMove);
+        // ===== RANDOM ENEMY MOVE =====
+        Move enemyMove = enemy.getMove(rand() % 4);
 
         cout << "\n--- Turn Start ---\n";
 
-        while (!turnQueue.empty()) {
-            Move current = turnQueue.top();
-            turnQueue.pop();
+        // ===== PRIORITY + SPEED LOGIC =====
+        bool playerFirst;
 
-            // TODO: Replace with real move comparison logic
-            cout << "[Action executed here]\n";
+        if (playerMove.getPriority() > enemyMove.getPriority()) {
+            playerFirst = true;
+        }
+        else if (playerMove.getPriority() < enemyMove.getPriority()) {
+            playerFirst = false;
+        }
+        else {
+            // same priority → check speed
+            playerFirst = player.getSpeed() >= enemy.getSpeed();
+        }
 
-            // Placeholder history log
-            history.push("Action executed");
+        // ===== EXECUTION =====
+        if (playerFirst) {
+            cout << player.getName() << " used " << playerMove.getName() << "!\n";
+            enemy.takeDamage(playerMove.getDamage());
+            history.push(player.getName() + " used " + playerMove.getName());
 
-            break; // prevent infinite loop for now
+            if (enemy.getIsAlive()) {
+                cout << enemy.getName() << " used " << enemyMove.getName() << "!\n";
+                player.takeDamage(enemyMove.getDamage());
+                history.push(enemy.getName() + " used " + enemyMove.getName());
+            }
+        } else {
+            cout << enemy.getName() << " used " << enemyMove.getName() << "!\n";
+            player.takeDamage(enemyMove.getDamage());
+            history.push(enemy.getName() + " used " + enemyMove.getName());
+
+            if (player.getIsAlive()) {
+                cout << player.getName() << " used " << playerMove.getName() << "!\n";
+                enemy.takeDamage(playerMove.getDamage());
+                history.push(player.getName() + " used " + playerMove.getName());
+            }
         }
 
         cout << "--- Turn End ---\n";
         system("pause");
-
-        // TEMP BREAK to avoid infinite loop since no real damage yet
-        break;
-    }
-
-    // ===== RESULT PLACEHOLDER =====
-    cout << "\n=== BATTLE RESULT ===\n";
-    cout << "Result will depend on actual battle logic.\n";
-
-    // ===== HISTORY DISPLAY =====
-    cout << "\n=== ACTION HISTORY ===\n";
-    while (!history.empty()) {
-        cout << history.top() << endl;
-        history.pop();
-    }
-
-    system("pause");
 }
 
 int main() {
@@ -237,5 +245,6 @@ int main() {
         }
     }
 
+    srand(time(0));
     return 0;
 }
