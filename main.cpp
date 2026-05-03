@@ -92,6 +92,7 @@ void ActionStack() {}
 
 void BattleSystem() {
     clearScreen();
+    cout << "=== 1v1 BATTLE START ===\n";
 }
 
 int main() {
