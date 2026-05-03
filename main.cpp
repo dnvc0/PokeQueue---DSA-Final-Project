@@ -1,4 +1,4 @@
-// main file for PokeQueue - DSA Final Project 
+// main file for PokeQueue - DSA Final Project
 #include <iostream>
 #include <cstdlib>  
 #include <queue>
@@ -29,11 +29,11 @@ class Move {
             damage = dmg;
         }
 
-        string getName() {return moveName;}
-        int getPriority() {return prioLvl;}
-        int getDamage() {return damage;}
+        string getName() const {return moveName;}
+        int getPriority() const {return prioLvl;}
+        int getDamage() const {return damage;}
 
-        void displayMove() {
+        void displayMove() const {
             cout << moveName << " (Priority: " << prioLvl << ", Damage: " << damage << ")" << endl;
         }
 };
@@ -63,13 +63,13 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
             isFainted = false;
         }
 
-        string getName() {return name;}
-        int getHP() {return hp;}
-        int getSpeed() {return speed;}
-        bool getIsAlive() {return isAlive;}
-        Move getMove(int index) {return moveSet[index];}
+        string getName() const {return name;}
+        int getHP() const {return hp;}
+        int getSpeed() const {return speed;}
+        bool getIsAlive() const {return isAlive;}
+        Move getMove(int index) const {return moveSet[index];}
 
-        void displayPokemon() {
+        void displayPokemon() const {
             cout << name << " (HP: " << hp << ", Speed: " << speed << ")" << endl;
         }
 
@@ -91,11 +91,44 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         }
 };
 
-void MoveQueue() {}
+void MoveQueue(Pokemon &player, Pokemon &enemy, Move &playerMove, Move &enemyMove) {
+    while (true) {
+        cout << "\nChoose Move:\n";
+        for (int i = 0; i < 4; i++) {
+            cout << i + 1 << ". ";
+            player.getMove(i).displayMove();
+        }
 
-void PriorityMoveQueue() {}
+        int choice;
+        cin >> choice;
 
-void ActionStack() {}
+        if (choice < 1 || choice > 4) {
+            cout << "Invalid move!\n";
+            system("pause");
+            continue;
+        }
+
+        playerMove = player.getMove(choice - 1);
+        enemyMove = enemy.getMove(rand() % 4);
+        break;
+    }
+}
+
+void PriorityMoveQueue(const Move &playerMove, const Move &enemyMove, const Pokemon &player, const Pokemon &enemy, bool &playerFirst) {
+    if (playerMove.getPriority() > enemyMove.getPriority()) {
+        playerFirst = true;
+    }
+    else if (playerMove.getPriority() < enemyMove.getPriority()) {
+        playerFirst = false;
+    }
+    else {
+        playerFirst = player.getSpeed() >= enemy.getSpeed();
+    }
+}
+
+void ActionStack(stack<string> &history, const string &action) {
+    history.push(action);
+}
 
 void BattleSystem() {
     clearScreen();
@@ -150,41 +183,15 @@ void BattleSystem() {
         enemy.displayPokemon();
 
         // ===== PLAYER MOVE =====
-        cout << "\nChoose Move:\n";
-        for (int i = 0; i < 4; i++) {
-            cout << i + 1 << ". ";
-            player.getMove(i).displayMove();
-        }
-
-        int choice;
-        cin >> choice;
-
-        if (choice < 1 || choice > 4) {
-            cout << "Invalid move!\n";
-            system("pause");
-            continue;
-        }
-
-        Move playerMove = player.getMove(choice - 1);
-
-        // ===== RANDOM ENEMY MOVE =====
-        Move enemyMove = enemy.getMove(rand() % 4);
+        Move playerMove;
+        Move enemyMove;
+        MoveQueue(player, enemy, playerMove, enemyMove);
 
         cout << "\n--- Turn Start ---\n";
 
         // ===== PRIORITY + SPEED LOGIC =====
         bool playerFirst;
-
-        if (playerMove.getPriority() > enemyMove.getPriority()) {
-            playerFirst = true;
-        }
-        else if (playerMove.getPriority() < enemyMove.getPriority()) {
-            playerFirst = false;
-        }
-        else {
-            // same priority → check speed
-            playerFirst = player.getSpeed() >= enemy.getSpeed();
-        }
+        PriorityMoveQueue(playerMove, enemyMove, player, enemy, playerFirst);
 
         // ===== EXECUTION =====
         if (playerFirst) {
