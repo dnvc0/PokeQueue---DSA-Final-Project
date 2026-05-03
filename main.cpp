@@ -1,6 +1,10 @@
 // main file for PokeQueue - DSA Final Project
 #include <iostream>
 #include <cstdlib>  
+#include <vector>
+#include <stack>
+#include <ctime>
+#include <queue>
 #include <string>   
 using namespace std;
 
