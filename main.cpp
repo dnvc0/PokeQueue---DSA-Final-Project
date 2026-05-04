@@ -199,6 +199,34 @@ string getEnemyDisplayName(const Pokemon &player, const Pokemon &enemy) {
     return enemy.getName();
 }
 
+Pokemon roster[4];
+
+void initRoster() {
+    roster[0] = Pokemon("Smeargle", 314, 75);
+    roster[0].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+    roster[0].setMove(1, Move("Wicked Torque", 0, 80, SLEEP, 10));
+    roster[0].setMove(2, Move("Gunk Shot", 0, 120, POISON, 30));
+    roster[0].setMove(3, Move("Dragon Tail", -6, 60));
+
+    roster[1] = Pokemon("Lucario", 344, 90);
+    roster[1].setMove(0, Move("Extreme Speed", 2, 80));
+    roster[1].setMove(1, Move("Feint", 2, 30, SHIELD_BREAK, 100));
+    roster[1].setMove(2, Move("Sucker Punch", 1, 70));
+    roster[1].setMove(3, Move("Thunderbolt", 0, 90, PARALYZE, 10));
+
+    roster[2] = Pokemon("Mew", 404, 100);
+    roster[2].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+    roster[2].setMove(1, Move("Focus Punch", -4, 150, FAIL_IF_HIT, 100));
+    roster[2].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+    roster[2].setMove(3, Move("Gunk Shot", 0, 120, POISON, 30));
+
+    roster[3] = Pokemon("Dragonite", 386, 80);
+    roster[3].setMove(0, Move("Extreme Speed", 2, 80));
+    roster[3].setMove(1, Move("Gunk Shot", 0, 120, POISON, 30));
+    roster[3].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+    roster[3].setMove(3, Move("Dragon Tail", -6, 60));
+}
+
 void createRandomEnemy(Pokemon &enemy) {
     int randEnemy = rand() % 4;
 
@@ -246,38 +274,9 @@ void displayHPBar(int hp, int maxHP, int speed, const Pokemon &poke) {
     cout << endl;
 }
 
+
 void BattleSystem() {
-    // ===== POKEMON SELECTION =====
-    Pokemon roster[4];
-    
-    // 1. Smeargle
-    roster[0] = Pokemon("Smeargle", 314, 75);
-    roster[0].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
-    roster[0].setMove(1, Move("Wicked Torque", 0, 80, SLEEP, 10));
-    roster[0].setMove(2, Move("Gunk Shot", 0, 120, POISON, 30));
-    roster[0].setMove(3, Move("Dragon Tail", -6, 60));
-
-    // 2. Lucario
-    roster[1] = Pokemon("Lucario", 344, 90);
-    roster[1].setMove(0, Move("Extreme Speed", 2, 80));
-    roster[1].setMove(1, Move("Feint", 2, 30, SHIELD_BREAK, 100));
-    roster[1].setMove(2, Move("Sucker Punch", 1, 70));
-    roster[1].setMove(3, Move("Thunderbolt", 0, 90, PARALYZE, 10));
-
-    // 3. Mew
-    roster[2] = Pokemon("Mew", 404, 100);
-    roster[2].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
-    roster[2].setMove(1, Move("Focus Punch", -4, 150, FAIL_IF_HIT, 100));
-    roster[2].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
-    roster[2].setMove(3, Move("Gunk Shot", 0, 120, POISON, 30));
-
-    // 4. Dragonite
-    roster[3] = Pokemon("Dragonite", 386, 80);
-    roster[3].setMove(0, Move("Extreme Speed", 2, 80));
-    roster[3].setMove(1, Move("Gunk Shot", 0, 120, POISON, 30));
-    roster[3].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
-    roster[3].setMove(3, Move("Dragon Tail", -6, 60));
-
+    initRoster();
     clearScreen();
     cout << "Select your Pokemon:\n";
     for(int i = 0; i < 4; i++) {
@@ -545,9 +544,36 @@ void BattleSystem() {
     system("pause");
 }
 
+bool searchMove(const Pokemon &poke, string target, int index = 0) {
+    if (index >= 4) return false;
+    if (poke.getMove(index).getMoveName() == target) return true;
+    return searchMove(poke, target, index + 1);
+}
+
+void searchMoveMenu() {
+    clearScreen();
+    cout << "Enter move name to search: ";
+    cin.ignore();
+    string target;
+    getline(cin, target);
+
+    cout << "\n--- Search Results for \"" << target << "\" ---\n";
+    bool found = false;
+    for (int i = 0; i < 4; i++) {
+        if (searchMove(roster[i], target)) {
+            cout << "> " << roster[i].getName() << " knows " << target << "!\n";
+            found = true;
+        }
+    }
+    if (!found) cout << "> Move \"" << target << "\" not found.\n";
+
+    cout << endl;
+    system("pause");
+}
 
 int main() {
     srand(time(0));
+    initRoster();
 
     cout << string(81, '=') << endl;
     cout << " _______  _______  ___   _  _______  _______  __   __  _______  __   __  _______ " << endl;
@@ -572,7 +598,8 @@ int main() {
         cout << "\\/    \\/\\__,_|_|_| |_| \\/    \\/\\___|_| |_|\\__,_|" << endl;
         cout << "\n1. New Battle" << endl;
         cout << "2. How to Play" << endl;
-        cout << "3. Exit game" << endl;
+        cout << "3. Move Dex" << endl;
+        cout << "4. Exit game" << endl;
         int option;
         cin >> option;
         switch (option) {
@@ -592,6 +619,10 @@ int main() {
                 system("pause");
                 break;
             case 3:
+                searchMoveMenu();
+                system("pause");
+                break;
+            case 4:
                 cout << "Thanks for playing!" << endl;
                 return 0;
             default:
