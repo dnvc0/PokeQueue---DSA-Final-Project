@@ -620,7 +620,6 @@ int main() {
                 break;
             case 3:
                 searchMoveMenu();
-                system("pause");
                 break;
             case 4:
                 cout << "Thanks for playing!" << endl;
