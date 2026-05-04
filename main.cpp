@@ -132,6 +132,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         }
 
         void takeDamage(int dmg) {
+            if(!isAlive) return;
             hp -= dmg;
             if (hp <= 0) {
                 hp = 0;
@@ -496,28 +497,27 @@ void BattleSystem() {
         }
 
         // Apply end-of-turn damage from status effects
-        if (player.getCurrentStatus() == BURN) {
+        if (player.getCurrentStatus() == BURN && player.getIsAlive()) {
             int burnDmg = player.getMaxHP() / 8;
             player.takeDamage(burnDmg);
             cout << "> " << player.getName() << " took " << burnDmg << " damage from burn!" << endl;
-        } else if (player.getCurrentStatus() == POISON) {
+        } else if (player.getCurrentStatus() == POISON && player.getIsAlive()) {
             int poisonDmg = player.getMaxHP() / 8;
             player.takeDamage(poisonDmg);
             cout << "> " << player.getName() << " took " << poisonDmg << " damage from poison!" << endl;
         }
 
-        if (enemy.getCurrentStatus() == BURN) {
+        if (enemy.getCurrentStatus() == BURN && enemy.getIsAlive()) {
             int burnDmg = enemy.getMaxHP() / 8;
             enemy.takeDamage(burnDmg);
             cout << "> " << getEnemyDisplayName(player, enemy) << " took " << burnDmg << " damage from burn!" << endl;
-        } else if (enemy.getCurrentStatus() == POISON) {
+        } else if (enemy.getCurrentStatus() == POISON && enemy.getIsAlive()) {
             int poisonDmg = enemy.getMaxHP() / 8;
             enemy.takeDamage(poisonDmg);
             cout << "> " << getEnemyDisplayName(player, enemy) << " took " << poisonDmg << " damage from poison!" << endl;
         }
 
         cout << string(15, '-') << "  Turn End  " << string(15, '-') << "\n\n";
-
 
         // Decrement status turn counters
         player.decrementStatusTurns();
