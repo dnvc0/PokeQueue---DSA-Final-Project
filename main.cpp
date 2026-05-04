@@ -1,4 +1,4 @@
-// main file for PokeQueue - DSA Final Project
+﻿// main file for PokeQueue - DSA Final Project
 #include <iostream>
 #include <cstdlib>  
 #include <queue>
@@ -12,31 +12,44 @@ void clearScreen() {
     system("cls");
 }
 
+enum StatusType { NONE, FLINCH, SLEEP, BURN, POISON, PARALYZE, SHIELD_BREAK, FAIL_IF_HIT };
+
 class Move {
     private:
         string moveName;
         int prioLvl;
         int damage;
+        StatusType status;
+        int statusChance; 
     public:
-        Move() {
-            moveName = "";
-            prioLvl = 0;
-            damage = 0;
-        }
-
-        Move(string name, int priority, int dmg) {
+        Move() : moveName(""), prioLvl(0), damage(0), status(NONE), statusChance(0) {}
+        Move(string name, int priority, int dmg, StatusType st = NONE, int chance = 0) {
             moveName = name;
             prioLvl = priority;
             damage = dmg;
+            status = st;
+            statusChance = chance;
         }
 
-        string getMoveName() const {return moveName;}
-        int getPriority() const {return prioLvl;}
-        int getDamage() const {return damage;}
+        string getMoveName() const { return moveName; }
+        int getPriority() const { return prioLvl; }
+        int getDamage() const { return damage; }
+        StatusType getStatus() const { return status; }
+        int getStatusChance() const { return statusChance; }
 
         void displayMove() const {
-            cout << moveName << "\t(Priority: " << prioLvl << ", Damage: " << damage << ")" << endl;
+            cout << moveName << "\t(Prio: " << prioLvl << ", Dmg: " << damage << ")";
+            if (status != NONE) cout << " [" << statusChance << "% Effect]";
+            cout << endl;
         }
+};
+
+struct MoveAction {
+    string actorName;
+    bool isPlayer;
+    Move move;
+    int priority;
+    int speed;
 };
 
 class Pokemon { // hindi pa nai-implement yung faint condtions
@@ -45,17 +58,23 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         int hp;
         int maxHP;
         int speed;
+        int turnCount;
         bool isAlive;
         bool isFainted;
         Move moveSet[4];
+        StatusType currentStatus;
+        int statusTurnsRemaining;
     public:
         Pokemon() {
             name = "";
             hp = 0;
             maxHP = 0;
+            turnCount = 0;
             speed = 0;
             isAlive = false;
             isFainted = true;
+            currentStatus = NONE;
+            statusTurnsRemaining = 0;
         }
 
         Pokemon(string n, int h, int s) {
@@ -63,8 +82,11 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
             hp = h;
             maxHP = h;
             speed = s;
+            turnCount = 0;
             isAlive = true;
             isFainted = false;
+            currentStatus = NONE;
+            statusTurnsRemaining = 0;
         }
 
         string getName() const {return name;}
@@ -73,6 +95,41 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         int getSpeed() const {return speed;}
         bool getIsAlive() const {return isAlive;}
         Move getMove(int index) const {return moveSet[index];}
+        int getTurnCount() const { return turnCount; }
+        void incrementTurn() { turnCount++; }
+        StatusType getCurrentStatus() const { return currentStatus; }
+        int getStatusTurnsRemaining() const { return statusTurnsRemaining; }
+
+        void applyStatus(StatusType status, int turns) {
+            if (currentStatus == NONE) {
+                currentStatus = status;
+                statusTurnsRemaining = turns;
+            }
+        }
+
+        void removeStatus() {
+            currentStatus = NONE;
+            statusTurnsRemaining = 0;
+        }
+
+        void decrementStatusTurns() {
+            if (statusTurnsRemaining > 0) {
+                statusTurnsRemaining--;
+                if (statusTurnsRemaining <= 0) {
+                    currentStatus = NONE;
+                }
+            }
+        }
+
+        string getStatusString() const {
+            switch(currentStatus) {
+                case SLEEP: return "[SLEEP]";
+                case BURN: return "[BURN]";
+                case POISON: return "[POISON]";
+                case PARALYZE: return "[PARALYZE]";
+                default: return "";
+            }
+        }
 
         void takeDamage(int dmg) {
             hp -= dmg;
@@ -91,6 +148,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
             moveSet[index] = move;
         }
 };
+
 
 void MoveQueue(Pokemon &player, Pokemon &enemy, Move &playerMove, Move &enemyMove) {
     while (true) {
@@ -134,49 +192,103 @@ void ActionStack(stack<string> &history, const string &action) {
     history.push(action);
 }
 
-void createRandomEnemy(Pokemon &enemy) {
-    int randEnemy = rand() % 3;
+string getEnemyDisplayName(const Pokemon &player, const Pokemon &enemy) {
+    if (player.getName() == enemy.getName()) {
+        return "Enemy " + enemy.getName();
+    }
+    return enemy.getName();
+}
 
-    if (randEnemy == 0) {
-        enemy = Pokemon("Charmander", 100, 65);
-        enemy.setMove(0, Move("Scratch", 1, 10));
-        enemy.setMove(1, Move("Ember", 1, 20));
-        enemy.setMove(2, Move("Flame Burst", 1, 18));
-        enemy.setMove(3, Move("Slash", 2, 15));
+void createRandomEnemy(Pokemon &enemy) {
+    int randEnemy = rand() % 4;
+
+    if (randEnemy == 0) { // Smeargle: The Status Lead
+        enemy = Pokemon("Smeargle", 314, 75);
+        enemy.setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+        enemy.setMove(1, Move("Wicked Torque", 0, 80, SLEEP, 10));
+        enemy.setMove(2, Move("Gunk Shot", 0, 120, POISON, 30));
+        enemy.setMove(3, Move("Dragon Tail", -6, 60));
     }
-    else if (randEnemy == 1) {
-        enemy = Pokemon("Squirtle", 100, 50);
-        enemy.setMove(0, Move("Tackle", 1, 10));
-        enemy.setMove(1, Move("Water Gun", 1, 20));
-        enemy.setMove(2, Move("Bubble", 1, 18));
-        enemy.setMove(3, Move("Aqua Jet", 2, 15));
+    else if (randEnemy == 1) { // Mew: The Heavy Hitter
+        enemy = Pokemon("Mew", 404, 100);
+        enemy.setMove(0, Move("Focus Punch", -4, 150, FAIL_IF_HIT, 100));
+        enemy.setMove(1, Move("Flamethrower", 0, 90, BURN, 10));
+        enemy.setMove(2, Move("Thunderbolt", 0, 90, PARALYZE, 10));
+        enemy.setMove(3, Move("Fake Out", 3, 40, FLINCH, 100));
     }
-    else {
-        enemy = Pokemon("Bulbasaur", 100, 45);
-        enemy.setMove(0, Move("Tackle", 1, 10));
-        enemy.setMove(1, Move("Vine Whip", 1, 20));
-        enemy.setMove(2, Move("Razor Leaf", 1, 18));
-        enemy.setMove(3, Move("Quick Attack", 2, 15));
+    else if (randEnemy == 2) { // Dragonite: The Tank
+        enemy = Pokemon("Dragonite", 386, 80);
+        enemy.setMove(0, Move("Extreme Speed", 2, 80));
+        enemy.setMove(1, Move("Gunk Shot", 0, 120, POISON, 30));
+        enemy.setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+        enemy.setMove(3, Move("Dragon Tail", -6, 60));
+    }
+    else { // Lucario: The Balanced Fighter
+        enemy = Pokemon("Lucario", 344, 90);
+        enemy.setMove(0, Move("Extreme Speed", 2, 80));
+        enemy.setMove(1, Move("Feint", 2, 30, SHIELD_BREAK, 100));
+        enemy.setMove(2, Move("Sucker Punch", 1, 70));
+        enemy.setMove(3, Move("Thunderbolt", 0, 90, PARALYZE, 10));
     }
 }
 
-void displayHPBar(int hp, int maxHP, int speed) {
+void displayHPBar(int hp, int maxHP, int speed, const Pokemon &poke) {
     int bars = (hp * 20) / maxHP;
     cout << "HP: [";
     for (int i = 0; i < 20; i++) {
         if (i < bars) cout << "#";
         else cout << "-";
     }
-    cout << "] " << hp << "/" << maxHP << " Speed: " << speed << endl;
+    cout << "] " << hp << "/" << maxHP << " Speed: " << speed;
+    if (poke.getCurrentStatus() != NONE) {
+        cout << " " << poke.getStatusString();
+    }
+    cout << endl;
 }
 
 void BattleSystem() {
-    // ===== PLAYER POKEMON =====
-    Pokemon player("Pikachu", 100, 90);
-    player.setMove(0, Move("Quick Attack", 2, 15));
-    player.setMove(1, Move("Thunderbolt", 1, 25));
-    player.setMove(2, Move("Iron Tail", 1, 20));
-    player.setMove(3, Move("Electro Ball", 1, 18));
+    // ===== POKEMON SELECTION =====
+    Pokemon roster[4];
+    
+    // 1. Smeargle
+    roster[0] = Pokemon("Smeargle", 314, 75);
+    roster[0].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+    roster[0].setMove(1, Move("Wicked Torque", 0, 80, SLEEP, 10));
+    roster[0].setMove(2, Move("Gunk Shot", 0, 120, POISON, 30));
+    roster[0].setMove(3, Move("Dragon Tail", -6, 60));
+
+    // 2. Lucario
+    roster[1] = Pokemon("Lucario", 344, 90);
+    roster[1].setMove(0, Move("Extreme Speed", 2, 80));
+    roster[1].setMove(1, Move("Feint", 2, 30, SHIELD_BREAK, 100));
+    roster[1].setMove(2, Move("Sucker Punch", 1, 70));
+    roster[1].setMove(3, Move("Thunderbolt", 0, 90, PARALYZE, 10));
+
+    // 3. Mew
+    roster[2] = Pokemon("Mew", 404, 100);
+    roster[2].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+    roster[2].setMove(1, Move("Focus Punch", -4, 150, FAIL_IF_HIT, 100));
+    roster[2].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+    roster[2].setMove(3, Move("Gunk Shot", 0, 120, POISON, 30));
+
+    // 4. Dragonite
+    roster[3] = Pokemon("Dragonite", 386, 80);
+    roster[3].setMove(0, Move("Extreme Speed", 2, 80));
+    roster[3].setMove(1, Move("Gunk Shot", 0, 120, POISON, 30));
+    roster[3].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+    roster[3].setMove(3, Move("Dragon Tail", -6, 60));
+
+    clearScreen();
+    cout << "Select your Pokemon:\n";
+    for(int i = 0; i < 4; i++) {
+        cout << i + 1 << ". " << roster[i].getName() << " (HP: " << roster[i].getMaxHP() << ", Speed: " << roster[i].getSpeed() << ")\n";
+    }
+
+    int pChoice;
+    cin >> pChoice;
+    if(pChoice < 1 || pChoice > 4) pChoice = 1; // Default to Smeargle if invalid
+
+    Pokemon player = roster[pChoice - 1];
 
     // ===== RANDOM ENEMY =====
     Pokemon enemy;
@@ -197,11 +309,11 @@ void BattleSystem() {
 
         cout << "\nYOUR POKEMON: \n";
         cout << player.getName() << endl;
-        displayHPBar(player.getHP(), player.getMaxHP(), player.getSpeed());
+        displayHPBar(player.getHP(), player.getMaxHP(), player.getSpeed(), player);
 
         cout << "\nENEMY POKEMON: \n";
-        cout << enemy.getName() << endl;
-        displayHPBar(enemy.getHP(), enemy.getMaxHP(), enemy.getSpeed());
+        cout << getEnemyDisplayName(player, enemy) << endl;
+        displayHPBar(enemy.getHP(), enemy.getMaxHP(), enemy.getSpeed(), enemy);
 
         // ===== PLAYER MOVE =====
         Move playerMove;
@@ -214,30 +326,206 @@ void BattleSystem() {
         bool playerFirst;
         PriorityMoveQueue(playerMove, enemyMove, player, enemy, playerFirst);
 
-        // ===== EXECUTION =====
+        // ===== BUILD MOVE QUEUE =====
+        queue<MoveAction> moveQueue;
+        
+        // Check status conditions that prevent moves
+        bool playerAsleep = player.getCurrentStatus() == SLEEP && player.getStatusTurnsRemaining() > 0;
+        bool enemyAsleep = enemy.getCurrentStatus() == SLEEP && enemy.getStatusTurnsRemaining() > 0;
+        
+        // Add moves to queue based on priority
         if (playerFirst) {
-            cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
-            enemy.takeDamage(playerMove.getDamage());
-            history.push("> " + player.getName() + " used " + playerMove.getMoveName());
-
-            if (enemy.getIsAlive()) {
-                cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
-                player.takeDamage(enemyMove.getDamage());
-                history.push("> " + enemy.getName() + " used " + enemyMove.getMoveName());
+            if (!playerAsleep && (playerMove.getMoveName() != "Fake Out" || player.getTurnCount() == 0)) {
+                MoveAction playerMA;
+                playerMA.actorName = player.getName();
+                playerMA.isPlayer = true;
+                playerMA.move = playerMove;
+                playerMA.priority = playerMove.getPriority();
+                playerMA.speed = player.getSpeed();
+                moveQueue.push(playerMA);
+            }
+            if (!enemyAsleep) {
+                MoveAction enemyMA;
+                enemyMA.actorName = getEnemyDisplayName(player, enemy);
+                enemyMA.isPlayer = false;
+                enemyMA.move = enemyMove;
+                enemyMA.priority = enemyMove.getPriority();
+                enemyMA.speed = enemy.getSpeed();
+                moveQueue.push(enemyMA);
             }
         } else {
-            cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
-            player.takeDamage(enemyMove.getDamage());
-            history.push("> " + enemy.getName() + " used " + enemyMove.getMoveName());
-
-            if (player.getIsAlive()) {
-                cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
-                enemy.takeDamage(playerMove.getDamage());
-                history.push("> " + player.getName() + " used " + playerMove.getMoveName());
+            if (!enemyAsleep) {
+                MoveAction enemyMA;
+                enemyMA.actorName = getEnemyDisplayName(player, enemy);
+                enemyMA.isPlayer = false;
+                enemyMA.move = enemyMove;
+                enemyMA.priority = enemyMove.getPriority();
+                enemyMA.speed = enemy.getSpeed();
+                moveQueue.push(enemyMA);
+            }
+            if (!playerAsleep && (playerMove.getMoveName() != "Fake Out" || player.getTurnCount() == 0)) {
+                MoveAction playerMA;
+                playerMA.actorName = player.getName();
+                playerMA.isPlayer = true;
+                playerMA.move = playerMove;
+                playerMA.priority = playerMove.getPriority();
+                playerMA.speed = player.getSpeed();
+                moveQueue.push(playerMA);
             }
         }
 
+        // ===== EXECUTE MOVES FROM QUEUE =====
+        bool enemyCanMove = true;
+        bool playerCanMove = true;
+        
+        while (!moveQueue.empty()) {
+            if (!player.getIsAlive() || !enemy.getIsAlive()) {
+                while (!moveQueue.empty()) moveQueue.pop();
+                break;
+            }
+
+            MoveAction action = moveQueue.front();
+            moveQueue.pop();
+            
+            // Check if the actor can still move
+            if (action.isPlayer && !playerCanMove) {
+                string msg = "> " + action.actorName + " is unable to move!";
+                cout << msg << endl;
+                ActionStack(history, msg);
+                continue;
+            }
+            if (!action.isPlayer && !enemyCanMove) {
+                string msg = "> " + action.actorName + " is unable to move!";
+                cout << msg << endl;
+                ActionStack(history, msg);
+                continue;
+            }
+            
+            // Execute the move
+            string moveMsg;
+            if (action.move.getMoveName() == "Fake Out" && (action.isPlayer ? player.getTurnCount() > 0 : enemy.getTurnCount() > 0)) {
+                moveMsg = "> " + action.actorName + " used Fake Out, but it failed!";
+                cout << moveMsg << endl;
+                ActionStack(history, moveMsg);
+            } else if (!action.isPlayer && action.move.getStatus() == FAIL_IF_HIT && player.getHP() < player.getMaxHP()) {
+                moveMsg = "> " + action.actorName + " lost its focus and couldn't move!";
+                cout << moveMsg << endl;
+                ActionStack(history, moveMsg);
+            } else {
+                moveMsg = "> " + action.actorName + " used " + action.move.getMoveName() + "!";
+                cout << moveMsg << endl;
+                ActionStack(history, moveMsg);
+                
+                // Apply damage
+                if (action.isPlayer) {
+                    enemy.takeDamage(action.move.getDamage());
+                } else {
+                    player.takeDamage(action.move.getDamage());
+                }
+
+                // If a KO happened, clear the queue and stop executing further moves
+                if (!player.getIsAlive() || !enemy.getIsAlive()) {
+                    while (!moveQueue.empty()) {
+                        moveQueue.pop();
+                    }
+                    break;
+                }
+                
+                // Apply status effects immediately
+                if (action.move.getStatus() == FLINCH && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemyCanMove = false;
+                        string msg = "> " + getEnemyDisplayName(player, enemy) + " flinched and can't move!";
+                        cout << msg << endl;
+                        ActionStack(history, msg);
+                    } else {
+                        playerCanMove = false;
+                        string msg = "> " + player.getName() + " flinched and can't move!";
+                        cout << msg << endl;
+                        ActionStack(history, msg);
+                    }
+                } else if (action.move.getStatus() == SLEEP && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemy.applyStatus(SLEEP, 2);
+                        enemyCanMove = false;
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " fell asleep!" << endl;
+                    } else {
+                        player.applyStatus(SLEEP, 2);
+                        playerCanMove = false;
+                        cout << "> " << player.getName() << " fell asleep!" << endl;
+                    }
+                } else if (action.move.getStatus() == BURN && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemy.applyStatus(BURN, 10);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was burned!" << endl;
+                    } else {
+                        player.applyStatus(BURN, 10);
+                        cout << "> " << player.getName() << " was burned!" << endl;
+                    }
+                } else if (action.move.getStatus() == POISON && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemy.applyStatus(POISON, 10);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was poisoned!" << endl;
+                    } else {
+                        player.applyStatus(POISON, 10);
+                        cout << "> " << player.getName() << " was poisoned!" << endl;
+                    }
+                } else if (action.move.getStatus() == PARALYZE && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemy.applyStatus(PARALYZE, 10);
+                        enemyCanMove = false;
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was paralyzed and can't move!" << endl;
+                    } else {
+                        player.applyStatus(PARALYZE, 10);
+                        playerCanMove = false;
+                        cout << "> " << player.getName() << " was paralyzed and can't move!" << endl;
+                    }
+                }
+            }
+        }
+        
+        // Handle sleep/asleep conditions
+        if (playerAsleep) {
+            string msg = "> " + player.getName() + " is asleep and can't move!";
+            cout << msg << endl;
+            ActionStack(history, msg);
+        }
+        if (enemyAsleep) {
+            string msg = "> " + getEnemyDisplayName(player, enemy) + " is asleep and can't move!";
+            cout << msg << endl;
+            ActionStack(history, msg);
+        }
+
+        // Apply end-of-turn damage from status effects
+        if (player.getCurrentStatus() == BURN) {
+            int burnDmg = player.getMaxHP() / 8;
+            player.takeDamage(burnDmg);
+            cout << "> " << player.getName() << " took " << burnDmg << " damage from burn!" << endl;
+        } else if (player.getCurrentStatus() == POISON) {
+            int poisonDmg = player.getMaxHP() / 8;
+            player.takeDamage(poisonDmg);
+            cout << "> " << player.getName() << " took " << poisonDmg << " damage from poison!" << endl;
+        }
+
+        if (enemy.getCurrentStatus() == BURN) {
+            int burnDmg = enemy.getMaxHP() / 8;
+            enemy.takeDamage(burnDmg);
+            cout << "> " << getEnemyDisplayName(player, enemy) << " took " << burnDmg << " damage from burn!" << endl;
+        } else if (enemy.getCurrentStatus() == POISON) {
+            int poisonDmg = enemy.getMaxHP() / 8;
+            enemy.takeDamage(poisonDmg);
+            cout << "> " << getEnemyDisplayName(player, enemy) << " took " << poisonDmg << " damage from poison!" << endl;
+        }
+
         cout << string(15, '-') << "  Turn End  " << string(15, '-') << "\n\n";
+
+
+        // Decrement status turn counters
+        player.decrementStatusTurns();
+        enemy.decrementStatusTurns();
+
+        player.incrementTurn();
+        enemy.incrementTurn();
         system("pause");
     }
 
@@ -256,6 +544,7 @@ void BattleSystem() {
     cout << endl;
     system("pause");
 }
+
 
 int main() {
     srand(time(0));
