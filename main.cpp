@@ -12,30 +12,34 @@ void clearScreen() {
     system("cls");
 }
 
+enum StatusType { NONE, FLINCH, SLEEP, BURN, POISON, PARALYZE, SHIELD_BREAK, FAIL_IF_HIT };
 class Move {
     private:
         string moveName;
         int prioLvl;
         int damage;
+        StatusType status;
+        int statusChance; 
     public:
-        Move() {
-            moveName = "";
-            prioLvl = 0;
-            damage = 0;
-        }
-
-        Move(string name, int priority, int dmg) {
+        Move() : moveName(""), prioLvl(0), damage(0), status(NONE), statusChance(0) {}
+        Move(string name, int priority, int dmg, StatusType st = NONE, int chance = 0) {
             moveName = name;
             prioLvl = priority;
             damage = dmg;
+            status = st;
+            statusChance = chance;
         }
 
-        string getMoveName() const {return moveName;}
-        int getPriority() const {return prioLvl;}
-        int getDamage() const {return damage;}
+        string getMoveName() const { return moveName; }
+        int getPriority() const { return prioLvl; }
+        int getDamage() const { return damage; }
+        StatusType getStatus() const { return status; }
+        int getStatusChance() const { return statusChance; }
 
         void displayMove() const {
-            cout << moveName << "\t(Priority: " << prioLvl << ", Damage: " << damage << ")" << endl;
+            cout << moveName << "\t(Prio: " << prioLvl << ", Dmg: " << damage << ")";
+            if (status != NONE) cout << " [" << statusChance << "% Effect]";
+            cout << endl;
         }
 };
 
@@ -45,6 +49,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         int hp;
         int maxHP;
         int speed;
+        int turnCount;
         bool isAlive;
         bool isFainted;
         Move moveSet[4];
@@ -53,6 +58,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
             name = "";
             hp = 0;
             maxHP = 0;
+            turnCount = 0;
             speed = 0;
             isAlive = false;
             isFainted = true;
@@ -63,6 +69,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
             hp = h;
             maxHP = h;
             speed = s;
+            turnCount = 0;
             isAlive = true;
             isFainted = false;
         }
@@ -73,6 +80,8 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         int getSpeed() const {return speed;}
         bool getIsAlive() const {return isAlive;}
         Move getMove(int index) const {return moveSet[index];}
+        int getTurnCount() const { return turnCount; }
+        void incrementTurn() { turnCount++; }
 
         void takeDamage(int dmg) {
             hp -= dmg;
@@ -137,26 +146,26 @@ void ActionStack(stack<string> &history, const string &action) {
 void createRandomEnemy(Pokemon &enemy) {
     int randEnemy = rand() % 3;
 
-    if (randEnemy == 0) {
-        enemy = Pokemon("Charmander", 100, 65);
-        enemy.setMove(0, Move("Scratch", 1, 10));
-        enemy.setMove(1, Move("Ember", 1, 20));
-        enemy.setMove(2, Move("Flame Burst", 1, 18));
-        enemy.setMove(3, Move("Slash", 2, 15));
+    if (randEnemy == 0) { // Smeargle: The Status Lead
+        enemy = Pokemon("Smeargle", 314, 75);
+        enemy.setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+        enemy.setMove(1, Move("Wicked Torque", 0, 80, SLEEP, 10));
+        enemy.setMove(2, Move("Gunk Shot", 0, 120, POISON, 30));
+        enemy.setMove(3, Move("Dragon Tail", -6, 60));
     }
-    else if (randEnemy == 1) {
-        enemy = Pokemon("Squirtle", 100, 50);
-        enemy.setMove(0, Move("Tackle", 1, 10));
-        enemy.setMove(1, Move("Water Gun", 1, 20));
-        enemy.setMove(2, Move("Bubble", 1, 18));
-        enemy.setMove(3, Move("Aqua Jet", 2, 15));
+    else if (randEnemy == 1) { // Mew: The Heavy Hitter
+        enemy = Pokemon("Mew", 404, 100);
+        enemy.setMove(0, Move("Focus Punch", -4, 150, FAIL_IF_HIT, 100));
+        enemy.setMove(1, Move("Flamethrower", 0, 90, BURN, 10));
+        enemy.setMove(2, Move("Thunderbolt", 0, 90, PARALYZE, 10));
+        enemy.setMove(3, Move("Fake Out", 3, 40, FLINCH, 100));
     }
-    else {
-        enemy = Pokemon("Bulbasaur", 100, 45);
-        enemy.setMove(0, Move("Tackle", 1, 10));
-        enemy.setMove(1, Move("Vine Whip", 1, 20));
-        enemy.setMove(2, Move("Razor Leaf", 1, 18));
-        enemy.setMove(3, Move("Quick Attack", 2, 15));
+    else { // Dragonite: The Tank
+        enemy = Pokemon("Dragonite", 386, 80);
+        enemy.setMove(0, Move("Extreme Speed", 2, 80));
+        enemy.setMove(1, Move("Gunk Shot", 0, 120, POISON, 30));
+        enemy.setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+        enemy.setMove(3, Move("Dragon Tail", -6, 60));
     }
 }
 
@@ -171,12 +180,48 @@ void displayHPBar(int hp, int maxHP, int speed) {
 }
 
 void BattleSystem() {
-    // ===== PLAYER POKEMON =====
-    Pokemon player("Pikachu", 100, 90);
-    player.setMove(0, Move("Quick Attack", 2, 15));
-    player.setMove(1, Move("Thunderbolt", 1, 25));
-    player.setMove(2, Move("Iron Tail", 1, 20));
-    player.setMove(3, Move("Electro Ball", 1, 18));
+    // ===== POKEMON SELECTION =====
+    Pokemon roster[4];
+    
+    // 1. Smeargle
+    roster[0] = Pokemon("Smeargle", 314, 75);
+    roster[0].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+    roster[0].setMove(1, Move("Wicked Torque", 0, 80, SLEEP, 10));
+    roster[0].setMove(2, Move("Gunk Shot", 0, 120, POISON, 30));
+    roster[0].setMove(3, Move("Dragon Tail", -6, 60));
+
+    // 2. Lucario
+    roster[1] = Pokemon("Lucario", 344, 90);
+    roster[1].setMove(0, Move("Extreme Speed", 2, 80));
+    roster[1].setMove(1, Move("Feint", 2, 30, SHIELD_BREAK, 100));
+    roster[1].setMove(2, Move("Sucker Punch", 1, 70));
+    roster[1].setMove(3, Move("Thunderbolt", 0, 90, PARALYZE, 10));
+
+    // 3. Mew
+    roster[2] = Pokemon("Mew", 404, 100);
+    roster[2].setMove(0, Move("Fake Out", 3, 40, FLINCH, 100));
+    roster[2].setMove(1, Move("Focus Punch", -4, 150, FAIL_IF_HIT, 100));
+    roster[2].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+    roster[2].setMove(3, Move("Gunk Shot", 0, 120, POISON, 30));
+
+    // 4. Dragonite
+    roster[3] = Pokemon("Dragonite", 386, 80);
+    roster[3].setMove(0, Move("Extreme Speed", 2, 80));
+    roster[3].setMove(1, Move("Gunk Shot", 0, 120, POISON, 30));
+    roster[3].setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
+    roster[3].setMove(3, Move("Dragon Tail", -6, 60));
+
+    clearScreen();
+    cout << "Select your Pokemon:\n";
+    for(int i = 0; i < 4; i++) {
+        cout << i + 1 << ". " << roster[i].getName() << " (HP: " << roster[i].getMaxHP() << ", Speed: " << roster[i].getSpeed() << ")\n";
+    }
+
+    int pChoice;
+    cin >> pChoice;
+    if(pChoice < 1 || pChoice > 4) pChoice = 1; // Default to Smeargle if invalid
+
+    Pokemon player = roster[pChoice - 1];
 
     // ===== RANDOM ENEMY =====
     Pokemon enemy;
@@ -214,30 +259,65 @@ void BattleSystem() {
         bool playerFirst;
         PriorityMoveQueue(playerMove, enemyMove, player, enemy, playerFirst);
 
-        // ===== EXECUTION =====
+// ===== EXECUTION WITH STATUS LOGIC =====
+        bool enemyFlinched = false;
+        bool playerFlinched = false;
+        
         if (playerFirst) {
-            cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
-            enemy.takeDamage(playerMove.getDamage());
-            history.push("> " + player.getName() + " used " + playerMove.getMoveName());
-
-            if (enemy.getIsAlive()) {
-                cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
-                player.takeDamage(enemyMove.getDamage());
-                history.push("> " + enemy.getName() + " used " + enemyMove.getMoveName());
-            }
-        } else {
-            cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
-            player.takeDamage(enemyMove.getDamage());
-            history.push("> " + enemy.getName() + " used " + enemyMove.getMoveName());
-
-            if (player.getIsAlive()) {
+            // Player Attacks First
+            if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
+                cout << "> " << player.getName() << " used Fake Out, but it failed!\n";
+            } else {
                 cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
                 enemy.takeDamage(playerMove.getDamage());
-                history.push("> " + player.getName() + " used " + playerMove.getMoveName());
+                
+                if (playerMove.getStatus() == FLINCH && (rand() % 100 < playerMove.getStatusChance())) {
+                    enemyFlinched = true;
+                }
+            }
+
+            // Enemy Attacks Second (if still alive and not flinched)
+            if (enemy.getIsAlive() && !enemyFlinched) {
+                if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
+                    cout << "> " << enemy.getName() << " used Fake Out, but it failed!\n";
+                } else {
+                    cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
+                    player.takeDamage(enemyMove.getDamage());
+                }
+            } else if (enemyFlinched) {
+                cout << "> " << enemy.getName() << " flinched and couldn't move!\n";
+            }
+        } else {
+            // Enemy Attacks First
+            if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
+                cout << "> " << enemy.getName() << " used Fake Out, but it failed!\n";
+            } else {
+                cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
+                player.takeDamage(enemyMove.getDamage());
+
+                if (enemyMove.getStatus() == FLINCH && (rand() % 100 < enemyMove.getStatusChance())) {
+                    playerFlinched = true;
+                }
+            }
+
+            // Player Attacks Second (if still alive and not flinched)
+            if (player.getIsAlive() && !playerFlinched) {
+                if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
+                    cout << "> " << player.getName() << " used Fake Out, but it failed!\n";
+                } else if (playerMove.getStatus() == FAIL_IF_HIT) {
+                    cout << "> " << player.getName() << " lost its focus and couldn't move!\n";
+                } else {
+                    cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
+                    enemy.takeDamage(playerMove.getDamage());
+                }
+            } else if (playerFlinched) {
+                cout << "> " << player.getName() << " flinched and couldn't move!\n";
             }
         }
 
         cout << string(15, '-') << "  Turn End  " << string(15, '-') << "\n\n";
+        player.incrementTurn();
+        enemy.incrementTurn();
         system("pause");
     }
 
@@ -256,6 +336,7 @@ void BattleSystem() {
     cout << endl;
     system("pause");
 }
+
 
 int main() {
     srand(time(0));
