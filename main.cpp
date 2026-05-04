@@ -53,6 +53,8 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         bool isAlive;
         bool isFainted;
         Move moveSet[4];
+        StatusType currentStatus;
+        int statusTurnsRemaining;
     public:
         Pokemon() {
             name = "";
@@ -62,6 +64,8 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
             speed = 0;
             isAlive = false;
             isFainted = true;
+            currentStatus = NONE;
+            statusTurnsRemaining = 0;
         }
 
         Pokemon(string n, int h, int s) {
@@ -72,6 +76,8 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
             turnCount = 0;
             isAlive = true;
             isFainted = false;
+            currentStatus = NONE;
+            statusTurnsRemaining = 0;
         }
 
         string getName() const {return name;}
@@ -82,6 +88,39 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         Move getMove(int index) const {return moveSet[index];}
         int getTurnCount() const { return turnCount; }
         void incrementTurn() { turnCount++; }
+        StatusType getCurrentStatus() const { return currentStatus; }
+        int getStatusTurnsRemaining() const { return statusTurnsRemaining; }
+
+        void applyStatus(StatusType status, int turns) {
+            if (currentStatus == NONE) {
+                currentStatus = status;
+                statusTurnsRemaining = turns;
+            }
+        }
+
+        void removeStatus() {
+            currentStatus = NONE;
+            statusTurnsRemaining = 0;
+        }
+
+        void decrementStatusTurns() {
+            if (statusTurnsRemaining > 0) {
+                statusTurnsRemaining--;
+                if (statusTurnsRemaining <= 0) {
+                    currentStatus = NONE;
+                }
+            }
+        }
+
+        string getStatusString() const {
+            switch(currentStatus) {
+                case SLEEP: return "[SLEEP]";
+                case BURN: return "[BURN]";
+                case POISON: return "[POISON]";
+                case PARALYZE: return "[PARALYZE]";
+                default: return "";
+            }
+        }
 
         void takeDamage(int dmg) {
             hp -= dmg;
@@ -169,14 +208,18 @@ void createRandomEnemy(Pokemon &enemy) {
     }
 }
 
-void displayHPBar(int hp, int maxHP, int speed) {
+void displayHPBar(int hp, int maxHP, int speed, const Pokemon &poke) {
     int bars = (hp * 20) / maxHP;
     cout << "HP: [";
     for (int i = 0; i < 20; i++) {
         if (i < bars) cout << "#";
         else cout << "-";
     }
-    cout << "] " << hp << "/" << maxHP << " Speed: " << speed << endl;
+    cout << "] " << hp << "/" << maxHP << " Speed: " << speed;
+    if (poke.getCurrentStatus() != NONE) {
+        cout << " " << poke.getStatusString();
+    }
+    cout << endl;
 }
 
 void BattleSystem() {
@@ -242,11 +285,11 @@ void BattleSystem() {
 
         cout << "\nYOUR POKEMON: \n";
         cout << player.getName() << endl;
-        displayHPBar(player.getHP(), player.getMaxHP(), player.getSpeed());
+        displayHPBar(player.getHP(), player.getMaxHP(), player.getSpeed(), player);
 
         cout << "\nENEMY POKEMON: \n";
         cout << enemy.getName() << endl;
-        displayHPBar(enemy.getHP(), enemy.getMaxHP(), enemy.getSpeed());
+        displayHPBar(enemy.getHP(), enemy.getMaxHP(), enemy.getSpeed(), enemy);
 
         // ===== PLAYER MOVE =====
         Move playerMove;
@@ -262,8 +305,15 @@ void BattleSystem() {
 // ===== EXECUTION WITH STATUS LOGIC =====
         bool enemyFlinched = false;
         bool playerFlinched = false;
-        
-        if (playerFirst) {
+        bool playerAsleep = player.getCurrentStatus() == SLEEP && player.getStatusTurnsRemaining() > 0;
+        bool enemyAsleep = enemy.getCurrentStatus() == SLEEP && enemy.getStatusTurnsRemaining() > 0;
+
+        // Check if player is asleep
+        if (playerAsleep) {
+            string sleepAction = "> " + player.getName() + " is asleep and can't move!";
+            cout << sleepAction << endl;
+            ActionStack(history, sleepAction);
+        } else if (playerFirst) {
             // Player Attacks First
             string playerAction;
             if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
@@ -274,14 +324,27 @@ void BattleSystem() {
                 cout << playerAction << endl;
                 enemy.takeDamage(playerMove.getDamage());
                 
+                // Apply status effects
                 if (playerMove.getStatus() == FLINCH && (rand() % 100 < playerMove.getStatusChance())) {
                     enemyFlinched = true;
+                } else if (playerMove.getStatus() == SLEEP && (rand() % 100 < playerMove.getStatusChance())) {
+                    enemy.applyStatus(SLEEP, 2);
+                    cout << "> " << enemy.getName() << " fell asleep!" << endl;
+                } else if (playerMove.getStatus() == BURN && (rand() % 100 < playerMove.getStatusChance())) {
+                    enemy.applyStatus(BURN, 1);
+                    cout << "> " << enemy.getName() << " was burned!" << endl;
+                } else if (playerMove.getStatus() == POISON && (rand() % 100 < playerMove.getStatusChance())) {
+                    enemy.applyStatus(POISON, 1);
+                    cout << "> " << enemy.getName() << " was poisoned!" << endl;
+                } else if (playerMove.getStatus() == PARALYZE && (rand() % 100 < playerMove.getStatusChance())) {
+                    enemy.applyStatus(PARALYZE, 1);
+                    cout << "> " << enemy.getName() << " was paralyzed!" << endl;
                 }
             }
             ActionStack(history, playerAction);
 
-            // Enemy Attacks Second (if still alive and not flinched)
-            if (enemy.getIsAlive() && !enemyFlinched) {
+            // Enemy Attacks Second (if still alive and not flinched or asleep)
+            if (enemy.getIsAlive() && !enemyFlinched && !enemyAsleep) {
                 string enemyAction;
                 if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
                     enemyAction = "> " + enemy.getName() + " used Fake Out, but it failed!";
@@ -290,32 +353,71 @@ void BattleSystem() {
                     enemyAction = "> " + enemy.getName() + " used " + enemyMove.getMoveName() + "!";
                     cout << enemyAction << endl;
                     player.takeDamage(enemyMove.getDamage());
+                    
+                    // Apply status effects
+                    if (enemyMove.getStatus() == FLINCH && (rand() % 100 < enemyMove.getStatusChance())) {
+                        playerFlinched = true;
+                    } else if (enemyMove.getStatus() == SLEEP && (rand() % 100 < enemyMove.getStatusChance())) {
+                        player.applyStatus(SLEEP, 2);
+                        cout << "> " << player.getName() << " fell asleep!" << endl;
+                    } else if (enemyMove.getStatus() == BURN && (rand() % 100 < enemyMove.getStatusChance())) {
+                        player.applyStatus(BURN, 1);
+                        cout << "> " << player.getName() << " was burned!" << endl;
+                    } else if (enemyMove.getStatus() == POISON && (rand() % 100 < enemyMove.getStatusChance())) {
+                        player.applyStatus(POISON, 1);
+                        cout << "> " << player.getName() << " was poisoned!" << endl;
+                    } else if (enemyMove.getStatus() == PARALYZE && (rand() % 100 < enemyMove.getStatusChance())) {
+                        player.applyStatus(PARALYZE, 1);
+                        cout << "> " << player.getName() << " was paralyzed!" << endl;
+                    }
                 }
                 ActionStack(history, enemyAction);
             } else if (enemyFlinched) {
                 string flinchAction = "> " + enemy.getName() + " flinched and couldn't move!";
                 cout << flinchAction << endl;
                 ActionStack(history, flinchAction);
+            } else if (enemyAsleep) {
+                string sleepAction = "> " + enemy.getName() + " is asleep and can't move!";
+                cout << sleepAction << endl;
+                ActionStack(history, sleepAction);
             }
         } else {
             // Enemy Attacks First
             string enemyAction;
-            if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
+            if (enemyAsleep) {
+                enemyAction = "> " + enemy.getName() + " is asleep and can't move!";
+                cout << enemyAction << endl;
+                ActionStack(history, enemyAction);
+            } else if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
                 enemyAction = "> " + enemy.getName() + " used Fake Out, but it failed!";
                 cout << enemyAction << endl;
+                ActionStack(history, enemyAction);
             } else {
                 enemyAction = "> " + enemy.getName() + " used " + enemyMove.getMoveName() + "!";
                 cout << enemyAction << endl;
                 player.takeDamage(enemyMove.getDamage());
                 
+                // Apply status effects
                 if (enemyMove.getStatus() == FLINCH && (rand() % 100 < enemyMove.getStatusChance())) {
                     playerFlinched = true;
+                } else if (enemyMove.getStatus() == SLEEP && (rand() % 100 < enemyMove.getStatusChance())) {
+                    player.applyStatus(SLEEP, 2);
+                    cout << "> " << player.getName() << " fell asleep!" << endl;
+                } else if (enemyMove.getStatus() == BURN && (rand() % 100 < enemyMove.getStatusChance())) {
+                    player.applyStatus(BURN, 1);
+                    cout << "> " << player.getName() << " was burned!" << endl;
+                } else if (enemyMove.getStatus() == POISON && (rand() % 100 < enemyMove.getStatusChance())) {
+                    player.applyStatus(POISON, 1);
+                    cout << "> " << player.getName() << " was poisoned!" << endl;
+                } else if (enemyMove.getStatus() == PARALYZE && (rand() % 100 < enemyMove.getStatusChance())) {
+                    player.applyStatus(PARALYZE, 1);
+                    cout << "> " << player.getName() << " was paralyzed!" << endl;
                 }
+                ActionStack(history, enemyAction);
             }
-            ActionStack(history, enemyAction);
 
-            // Player Attacks Second (if still alive and not flinched)
-            if (player.getIsAlive() && !playerFlinched) {
+            // Player Attacks Second (if still alive and not flinched or asleep)
+            if (player.getIsAlive() && !playerFlinched && !playerAsleep) {
                 string playerAction;
                 if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
                     playerAction = "> " + player.getName() + " used Fake Out, but it failed!";
@@ -327,14 +429,61 @@ void BattleSystem() {
                     playerAction = "> " + player.getName() + " used " + playerMove.getMoveName() + "!";
                     cout << playerAction << endl;
                     enemy.takeDamage(playerMove.getDamage());
+                    
+                    // Apply status effects
+                    if (playerMove.getStatus() == FLINCH && (rand() % 100 < playerMove.getStatusChance())) {
+                        enemyFlinched = true;
+                    } else if (playerMove.getStatus() == SLEEP && (rand() % 100 < playerMove.getStatusChance())) {
+                        enemy.applyStatus(SLEEP, 2);
+                        cout << "> " << enemy.getName() << " fell asleep!" << endl;
+                    } else if (playerMove.getStatus() == BURN && (rand() % 100 < playerMove.getStatusChance())) {
+                        enemy.applyStatus(BURN, 1);
+                        cout << "> " << enemy.getName() << " was burned!" << endl;
+                    } else if (playerMove.getStatus() == POISON && (rand() % 100 < playerMove.getStatusChance())) {
+                        enemy.applyStatus(POISON, 1);
+                        cout << "> " << enemy.getName() << " was poisoned!" << endl;
+                    } else if (playerMove.getStatus() == PARALYZE && (rand() % 100 < playerMove.getStatusChance())) {
+                        enemy.applyStatus(PARALYZE, 1);
+                        cout << "> " << enemy.getName() << " was paralyzed!" << endl;
+                    }
                 }
                 ActionStack(history, playerAction);
             } else if (playerFlinched) {
                 string flinchAction = "> " + player.getName() + " flinched and couldn't move!";
                 cout << flinchAction << endl;
                 ActionStack(history, flinchAction);
+            } else if (playerAsleep) {
+                string sleepAction = "> " + player.getName() + " is asleep and can't move!";
+                cout << sleepAction << endl;
+                ActionStack(history, sleepAction);
             }
         }
+
+        // Apply end-of-turn damage from status effects
+        if (player.getCurrentStatus() == BURN) {
+            int burnDmg = player.getMaxHP() / 8;
+            player.takeDamage(burnDmg);
+            cout << "> " << player.getName() << " took " << burnDmg << " damage from burn!" << endl;
+        } else if (player.getCurrentStatus() == POISON) {
+            int poisonDmg = player.getMaxHP() / 8;
+            player.takeDamage(poisonDmg);
+            cout << "> " << player.getName() << " took " << poisonDmg << " damage from poison!" << endl;
+        }
+
+        if (enemy.getCurrentStatus() == BURN) {
+            int burnDmg = enemy.getMaxHP() / 8;
+            enemy.takeDamage(burnDmg);
+            cout << "> " << enemy.getName() << " took " << burnDmg << " damage from burn!" << endl;
+        } else if (enemy.getCurrentStatus() == POISON) {
+            int poisonDmg = enemy.getMaxHP() / 8;
+            enemy.takeDamage(poisonDmg);
+            cout << "> " << enemy.getName() << " took " << poisonDmg << " damage from poison!" << endl;
+        }
+
+        // Decrement status turn counters
+        player.decrementStatusTurns();
+        enemy.decrementStatusTurns();
+
         player.incrementTurn();
         enemy.incrementTurn();
         system("pause");
