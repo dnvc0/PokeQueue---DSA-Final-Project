@@ -1,4 +1,4 @@
-// main file for PokeQueue - DSA Final Project
+﻿// main file for PokeQueue - DSA Final Project
 #include <iostream>
 #include <cstdlib>  
 #include <queue>
@@ -13,6 +13,7 @@ void clearScreen() {
 }
 
 enum StatusType { NONE, FLINCH, SLEEP, BURN, POISON, PARALYZE, SHIELD_BREAK, FAIL_IF_HIT };
+
 class Move {
     private:
         string moveName;
@@ -41,6 +42,14 @@ class Move {
             if (status != NONE) cout << " [" << statusChance << "% Effect]";
             cout << endl;
         }
+};
+
+struct MoveAction {
+    string actorName;
+    bool isPlayer;
+    Move move;
+    int priority;
+    int speed;
 };
 
 class Pokemon { // hindi pa nai-implement yung faint condtions
@@ -140,6 +149,7 @@ class Pokemon { // hindi pa nai-implement yung faint condtions
         }
 };
 
+
 void MoveQueue(Pokemon &player, Pokemon &enemy, Move &playerMove, Move &enemyMove) {
     while (true) {
         cout << endl;
@@ -182,8 +192,15 @@ void ActionStack(stack<string> &history, const string &action) {
     history.push(action);
 }
 
+string getEnemyDisplayName(const Pokemon &player, const Pokemon &enemy) {
+    if (player.getName() == enemy.getName()) {
+        return "Enemy " + enemy.getName();
+    }
+    return enemy.getName();
+}
+
 void createRandomEnemy(Pokemon &enemy) {
-    int randEnemy = rand() % 3;
+    int randEnemy = rand() % 4;
 
     if (randEnemy == 0) { // Smeargle: The Status Lead
         enemy = Pokemon("Smeargle", 314, 75);
@@ -199,12 +216,19 @@ void createRandomEnemy(Pokemon &enemy) {
         enemy.setMove(2, Move("Thunderbolt", 0, 90, PARALYZE, 10));
         enemy.setMove(3, Move("Fake Out", 3, 40, FLINCH, 100));
     }
-    else { // Dragonite: The Tank
+    else if (randEnemy == 2) { // Dragonite: The Tank
         enemy = Pokemon("Dragonite", 386, 80);
         enemy.setMove(0, Move("Extreme Speed", 2, 80));
         enemy.setMove(1, Move("Gunk Shot", 0, 120, POISON, 30));
         enemy.setMove(2, Move("Flamethrower", 0, 90, BURN, 10));
         enemy.setMove(3, Move("Dragon Tail", -6, 60));
+    }
+    else { // Lucario: The Balanced Fighter
+        enemy = Pokemon("Lucario", 344, 90);
+        enemy.setMove(0, Move("Extreme Speed", 2, 80));
+        enemy.setMove(1, Move("Feint", 2, 30, SHIELD_BREAK, 100));
+        enemy.setMove(2, Move("Sucker Punch", 1, 70));
+        enemy.setMove(3, Move("Thunderbolt", 0, 90, PARALYZE, 10));
     }
 }
 
@@ -288,7 +312,7 @@ void BattleSystem() {
         displayHPBar(player.getHP(), player.getMaxHP(), player.getSpeed(), player);
 
         cout << "\nENEMY POKEMON: \n";
-        cout << enemy.getName() << endl;
+        cout << getEnemyDisplayName(player, enemy) << endl;
         displayHPBar(enemy.getHP(), enemy.getMaxHP(), enemy.getSpeed(), enemy);
 
         // ===== PLAYER MOVE =====
@@ -302,161 +326,174 @@ void BattleSystem() {
         bool playerFirst;
         PriorityMoveQueue(playerMove, enemyMove, player, enemy, playerFirst);
 
-// ===== EXECUTION WITH STATUS LOGIC =====
-        bool enemyFlinched = false;
-        bool playerFlinched = false;
+        // ===== BUILD MOVE QUEUE =====
+        queue<MoveAction> moveQueue;
+        
+        // Check status conditions that prevent moves
         bool playerAsleep = player.getCurrentStatus() == SLEEP && player.getStatusTurnsRemaining() > 0;
         bool enemyAsleep = enemy.getCurrentStatus() == SLEEP && enemy.getStatusTurnsRemaining() > 0;
-
-        // Check if player is asleep
-        if (playerAsleep) {
-            string sleepAction = "> " + player.getName() + " is asleep and can't move!";
-            cout << sleepAction << endl;
-            ActionStack(history, sleepAction);
-        } else if (playerFirst) {
-            // Player Attacks First
-            string playerAction;
-            if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
-                playerAction = "> " + player.getName() + " used Fake Out, but it failed!";
-                cout << playerAction << endl;
-            } else {
-                playerAction = "> " + player.getName() + " used " + playerMove.getMoveName() + "!";
-                cout << playerAction << endl;
-                enemy.takeDamage(playerMove.getDamage());
-                
-                // Apply status effects
-                if (playerMove.getStatus() == FLINCH && (rand() % 100 < playerMove.getStatusChance())) {
-                    enemyFlinched = true;
-                } else if (playerMove.getStatus() == SLEEP && (rand() % 100 < playerMove.getStatusChance())) {
-                    enemy.applyStatus(SLEEP, 2);
-                    cout << "> " << enemy.getName() << " fell asleep!" << endl;
-                } else if (playerMove.getStatus() == BURN && (rand() % 100 < playerMove.getStatusChance())) {
-                    enemy.applyStatus(BURN, 1);
-                    cout << "> " << enemy.getName() << " was burned!" << endl;
-                } else if (playerMove.getStatus() == POISON && (rand() % 100 < playerMove.getStatusChance())) {
-                    enemy.applyStatus(POISON, 1);
-                    cout << "> " << enemy.getName() << " was poisoned!" << endl;
-                } else if (playerMove.getStatus() == PARALYZE && (rand() % 100 < playerMove.getStatusChance())) {
-                    enemy.applyStatus(PARALYZE, 1);
-                    cout << "> " << enemy.getName() << " was paralyzed!" << endl;
-                }
+        
+        // Add moves to queue based on priority
+        if (playerFirst) {
+            if (!playerAsleep && (playerMove.getMoveName() != "Fake Out" || player.getTurnCount() == 0)) {
+                MoveAction playerMA;
+                playerMA.actorName = player.getName();
+                playerMA.isPlayer = true;
+                playerMA.move = playerMove;
+                playerMA.priority = playerMove.getPriority();
+                playerMA.speed = player.getSpeed();
+                moveQueue.push(playerMA);
             }
-            ActionStack(history, playerAction);
-
-            // Enemy Attacks Second (if still alive and not flinched or asleep)
-            if (enemy.getIsAlive() && !enemyFlinched && !enemyAsleep) {
-                string enemyAction;
-                if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
-                    enemyAction = "> " + enemy.getName() + " used Fake Out, but it failed!";
-                    cout << enemyAction << endl;
-                } else {
-                    enemyAction = "> " + enemy.getName() + " used " + enemyMove.getMoveName() + "!";
-                    cout << enemyAction << endl;
-                    player.takeDamage(enemyMove.getDamage());
-                    
-                    // Apply status effects
-                    if (enemyMove.getStatus() == FLINCH && (rand() % 100 < enemyMove.getStatusChance())) {
-                        playerFlinched = true;
-                    } else if (enemyMove.getStatus() == SLEEP && (rand() % 100 < enemyMove.getStatusChance())) {
-                        player.applyStatus(SLEEP, 2);
-                        cout << "> " << player.getName() << " fell asleep!" << endl;
-                    } else if (enemyMove.getStatus() == BURN && (rand() % 100 < enemyMove.getStatusChance())) {
-                        player.applyStatus(BURN, 1);
-                        cout << "> " << player.getName() << " was burned!" << endl;
-                    } else if (enemyMove.getStatus() == POISON && (rand() % 100 < enemyMove.getStatusChance())) {
-                        player.applyStatus(POISON, 1);
-                        cout << "> " << player.getName() << " was poisoned!" << endl;
-                    } else if (enemyMove.getStatus() == PARALYZE && (rand() % 100 < enemyMove.getStatusChance())) {
-                        player.applyStatus(PARALYZE, 1);
-                        cout << "> " << player.getName() << " was paralyzed!" << endl;
-                    }
-                }
-                ActionStack(history, enemyAction);
-            } else if (enemyFlinched) {
-                string flinchAction = "> " + enemy.getName() + " flinched and couldn't move!";
-                cout << flinchAction << endl;
-                ActionStack(history, flinchAction);
-            } else if (enemyAsleep) {
-                string sleepAction = "> " + enemy.getName() + " is asleep and can't move!";
-                cout << sleepAction << endl;
-                ActionStack(history, sleepAction);
+            if (!enemyAsleep) {
+                MoveAction enemyMA;
+                enemyMA.actorName = getEnemyDisplayName(player, enemy);
+                enemyMA.isPlayer = false;
+                enemyMA.move = enemyMove;
+                enemyMA.priority = enemyMove.getPriority();
+                enemyMA.speed = enemy.getSpeed();
+                moveQueue.push(enemyMA);
             }
         } else {
-            // Enemy Attacks First
-            string enemyAction;
-            if (enemyAsleep) {
-                enemyAction = "> " + enemy.getName() + " is asleep and can't move!";
-                cout << enemyAction << endl;
-                ActionStack(history, enemyAction);
-            } else if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
-                enemyAction = "> " + enemy.getName() + " used Fake Out, but it failed!";
-                cout << enemyAction << endl;
-                ActionStack(history, enemyAction);
-            } else {
-                enemyAction = "> " + enemy.getName() + " used " + enemyMove.getMoveName() + "!";
-                cout << enemyAction << endl;
-                player.takeDamage(enemyMove.getDamage());
-                
-                // Apply status effects
-                if (enemyMove.getStatus() == FLINCH && (rand() % 100 < enemyMove.getStatusChance())) {
-                    playerFlinched = true;
-                } else if (enemyMove.getStatus() == SLEEP && (rand() % 100 < enemyMove.getStatusChance())) {
-                    player.applyStatus(SLEEP, 2);
-                    cout << "> " << player.getName() << " fell asleep!" << endl;
-                } else if (enemyMove.getStatus() == BURN && (rand() % 100 < enemyMove.getStatusChance())) {
-                    player.applyStatus(BURN, 1);
-                    cout << "> " << player.getName() << " was burned!" << endl;
-                } else if (enemyMove.getStatus() == POISON && (rand() % 100 < enemyMove.getStatusChance())) {
-                    player.applyStatus(POISON, 1);
-                    cout << "> " << player.getName() << " was poisoned!" << endl;
-                } else if (enemyMove.getStatus() == PARALYZE && (rand() % 100 < enemyMove.getStatusChance())) {
-                    player.applyStatus(PARALYZE, 1);
-                    cout << "> " << player.getName() << " was paralyzed!" << endl;
-                }
-                ActionStack(history, enemyAction);
+            if (!enemyAsleep) {
+                MoveAction enemyMA;
+                enemyMA.actorName = getEnemyDisplayName(player, enemy);
+                enemyMA.isPlayer = false;
+                enemyMA.move = enemyMove;
+                enemyMA.priority = enemyMove.getPriority();
+                enemyMA.speed = enemy.getSpeed();
+                moveQueue.push(enemyMA);
+            }
+            if (!playerAsleep && (playerMove.getMoveName() != "Fake Out" || player.getTurnCount() == 0)) {
+                MoveAction playerMA;
+                playerMA.actorName = player.getName();
+                playerMA.isPlayer = true;
+                playerMA.move = playerMove;
+                playerMA.priority = playerMove.getPriority();
+                playerMA.speed = player.getSpeed();
+                moveQueue.push(playerMA);
+            }
+        }
+
+        // ===== EXECUTE MOVES FROM QUEUE =====
+        bool enemyCanMove = true;
+        bool playerCanMove = true;
+        
+        while (!moveQueue.empty()) {
+            if (!player.getIsAlive() || !enemy.getIsAlive()) {
+                while (!moveQueue.empty()) moveQueue.pop();
+                break;
             }
 
-            // Player Attacks Second (if still alive and not flinched or asleep)
-            if (player.getIsAlive() && !playerFlinched && !playerAsleep) {
-                string playerAction;
-                if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
-                    playerAction = "> " + player.getName() + " used Fake Out, but it failed!";
-                    cout << playerAction << endl;
-                } else if (playerMove.getStatus() == FAIL_IF_HIT) {
-                    playerAction = "> " + player.getName() + " lost its focus and couldn't move!";
-                    cout << playerAction << endl;
+            MoveAction action = moveQueue.front();
+            moveQueue.pop();
+            
+            // Check if the actor can still move
+            if (action.isPlayer && !playerCanMove) {
+                string msg = "> " + action.actorName + " is unable to move!";
+                cout << msg << endl;
+                ActionStack(history, msg);
+                continue;
+            }
+            if (!action.isPlayer && !enemyCanMove) {
+                string msg = "> " + action.actorName + " is unable to move!";
+                cout << msg << endl;
+                ActionStack(history, msg);
+                continue;
+            }
+            
+            // Execute the move
+            string moveMsg;
+            if (action.move.getMoveName() == "Fake Out" && (action.isPlayer ? player.getTurnCount() > 0 : enemy.getTurnCount() > 0)) {
+                moveMsg = "> " + action.actorName + " used Fake Out, but it failed!";
+                cout << moveMsg << endl;
+                ActionStack(history, moveMsg);
+            } else if (!action.isPlayer && action.move.getStatus() == FAIL_IF_HIT && player.getHP() < player.getMaxHP()) {
+                moveMsg = "> " + action.actorName + " lost its focus and couldn't move!";
+                cout << moveMsg << endl;
+                ActionStack(history, moveMsg);
+            } else {
+                moveMsg = "> " + action.actorName + " used " + action.move.getMoveName() + "!";
+                cout << moveMsg << endl;
+                ActionStack(history, moveMsg);
+                
+                // Apply damage
+                if (action.isPlayer) {
+                    enemy.takeDamage(action.move.getDamage());
                 } else {
-                    playerAction = "> " + player.getName() + " used " + playerMove.getMoveName() + "!";
-                    cout << playerAction << endl;
-                    enemy.takeDamage(playerMove.getDamage());
-                    
-                    // Apply status effects
-                    if (playerMove.getStatus() == FLINCH && (rand() % 100 < playerMove.getStatusChance())) {
-                        enemyFlinched = true;
-                    } else if (playerMove.getStatus() == SLEEP && (rand() % 100 < playerMove.getStatusChance())) {
+                    player.takeDamage(action.move.getDamage());
+                }
+
+                // If a KO happened, clear the queue and stop executing further moves
+                if (!player.getIsAlive() || !enemy.getIsAlive()) {
+                    while (!moveQueue.empty()) {
+                        moveQueue.pop();
+                    }
+                    break;
+                }
+                
+                // Apply status effects immediately
+                if (action.move.getStatus() == FLINCH && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemyCanMove = false;
+                        string msg = "> " + getEnemyDisplayName(player, enemy) + " flinched and can't move!";
+                        cout << msg << endl;
+                        ActionStack(history, msg);
+                    } else {
+                        playerCanMove = false;
+                        string msg = "> " + player.getName() + " flinched and can't move!";
+                        cout << msg << endl;
+                        ActionStack(history, msg);
+                    }
+                } else if (action.move.getStatus() == SLEEP && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
                         enemy.applyStatus(SLEEP, 2);
-                        cout << "> " << enemy.getName() << " fell asleep!" << endl;
-                    } else if (playerMove.getStatus() == BURN && (rand() % 100 < playerMove.getStatusChance())) {
-                        enemy.applyStatus(BURN, 1);
-                        cout << "> " << enemy.getName() << " was burned!" << endl;
-                    } else if (playerMove.getStatus() == POISON && (rand() % 100 < playerMove.getStatusChance())) {
-                        enemy.applyStatus(POISON, 1);
-                        cout << "> " << enemy.getName() << " was poisoned!" << endl;
-                    } else if (playerMove.getStatus() == PARALYZE && (rand() % 100 < playerMove.getStatusChance())) {
-                        enemy.applyStatus(PARALYZE, 1);
-                        cout << "> " << enemy.getName() << " was paralyzed!" << endl;
+                        enemyCanMove = false;
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " fell asleep!" << endl;
+                    } else {
+                        player.applyStatus(SLEEP, 2);
+                        playerCanMove = false;
+                        cout << "> " << player.getName() << " fell asleep!" << endl;
+                    }
+                } else if (action.move.getStatus() == BURN && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemy.applyStatus(BURN, 10);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was burned!" << endl;
+                    } else {
+                        player.applyStatus(BURN, 10);
+                        cout << "> " << player.getName() << " was burned!" << endl;
+                    }
+                } else if (action.move.getStatus() == POISON && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemy.applyStatus(POISON, 10);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was poisoned!" << endl;
+                    } else {
+                        player.applyStatus(POISON, 10);
+                        cout << "> " << player.getName() << " was poisoned!" << endl;
+                    }
+                } else if (action.move.getStatus() == PARALYZE && (rand() % 100 < action.move.getStatusChance())) {
+                    if (action.isPlayer) {
+                        enemy.applyStatus(PARALYZE, 10);
+                        enemyCanMove = false;
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was paralyzed and can't move!" << endl;
+                    } else {
+                        player.applyStatus(PARALYZE, 10);
+                        playerCanMove = false;
+                        cout << "> " << player.getName() << " was paralyzed and can't move!" << endl;
                     }
                 }
-                ActionStack(history, playerAction);
-            } else if (playerFlinched) {
-                string flinchAction = "> " + player.getName() + " flinched and couldn't move!";
-                cout << flinchAction << endl;
-                ActionStack(history, flinchAction);
-            } else if (playerAsleep) {
-                string sleepAction = "> " + player.getName() + " is asleep and can't move!";
-                cout << sleepAction << endl;
-                ActionStack(history, sleepAction);
             }
+        }
+        
+        // Handle sleep/asleep conditions
+        if (playerAsleep) {
+            string msg = "> " + player.getName() + " is asleep and can't move!";
+            cout << msg << endl;
+            ActionStack(history, msg);
+        }
+        if (enemyAsleep) {
+            string msg = "> " + getEnemyDisplayName(player, enemy) + " is asleep and can't move!";
+            cout << msg << endl;
+            ActionStack(history, msg);
         }
 
         // Apply end-of-turn damage from status effects
@@ -473,12 +510,15 @@ void BattleSystem() {
         if (enemy.getCurrentStatus() == BURN) {
             int burnDmg = enemy.getMaxHP() / 8;
             enemy.takeDamage(burnDmg);
-            cout << "> " << enemy.getName() << " took " << burnDmg << " damage from burn!" << endl;
+            cout << "> " << getEnemyDisplayName(player, enemy) << " took " << burnDmg << " damage from burn!" << endl;
         } else if (enemy.getCurrentStatus() == POISON) {
             int poisonDmg = enemy.getMaxHP() / 8;
             enemy.takeDamage(poisonDmg);
-            cout << "> " << enemy.getName() << " took " << poisonDmg << " damage from poison!" << endl;
+            cout << "> " << getEnemyDisplayName(player, enemy) << " took " << poisonDmg << " damage from poison!" << endl;
         }
+
+        cout << string(15, '-') << "  Turn End  " << string(15, '-') << "\n\n";
+
 
         // Decrement status turn counters
         player.decrementStatusTurns();
