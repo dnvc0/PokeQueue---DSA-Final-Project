@@ -265,57 +265,76 @@ void BattleSystem() {
         
         if (playerFirst) {
             // Player Attacks First
+            string playerAction;
             if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
-                cout << "> " << player.getName() << " used Fake Out, but it failed!\n";
+                playerAction = "> " + player.getName() + " used Fake Out, but it failed!";
+                cout << playerAction << endl;
             } else {
-                cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
+                playerAction = "> " + player.getName() + " used " + playerMove.getMoveName() + "!";
+                cout << playerAction << endl;
                 enemy.takeDamage(playerMove.getDamage());
                 
                 if (playerMove.getStatus() == FLINCH && (rand() % 100 < playerMove.getStatusChance())) {
                     enemyFlinched = true;
                 }
             }
+            ActionStack(history, playerAction);
 
             // Enemy Attacks Second (if still alive and not flinched)
             if (enemy.getIsAlive() && !enemyFlinched) {
+                string enemyAction;
                 if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
-                    cout << "> " << enemy.getName() << " used Fake Out, but it failed!\n";
+                    enemyAction = "> " + enemy.getName() + " used Fake Out, but it failed!";
+                    cout << enemyAction << endl;
                 } else {
-                    cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
+                    enemyAction = "> " + enemy.getName() + " used " + enemyMove.getMoveName() + "!";
+                    cout << enemyAction << endl;
                     player.takeDamage(enemyMove.getDamage());
                 }
+                ActionStack(history, enemyAction);
             } else if (enemyFlinched) {
-                cout << "> " << enemy.getName() << " flinched and couldn't move!\n";
+                string flinchAction = "> " + enemy.getName() + " flinched and couldn't move!";
+                cout << flinchAction << endl;
+                ActionStack(history, flinchAction);
             }
         } else {
             // Enemy Attacks First
+            string enemyAction;
             if (enemyMove.getMoveName() == "Fake Out" && enemy.getTurnCount() > 0) {
-                cout << "> " << enemy.getName() << " used Fake Out, but it failed!\n";
+                enemyAction = "> " + enemy.getName() + " used Fake Out, but it failed!";
+                cout << enemyAction << endl;
             } else {
-                cout << "> " << enemy.getName() << " used " << enemyMove.getMoveName() << "!\n";
+                enemyAction = "> " + enemy.getName() + " used " + enemyMove.getMoveName() + "!";
+                cout << enemyAction << endl;
                 player.takeDamage(enemyMove.getDamage());
-
+                
                 if (enemyMove.getStatus() == FLINCH && (rand() % 100 < enemyMove.getStatusChance())) {
                     playerFlinched = true;
                 }
             }
+            ActionStack(history, enemyAction);
 
             // Player Attacks Second (if still alive and not flinched)
             if (player.getIsAlive() && !playerFlinched) {
+                string playerAction;
                 if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
-                    cout << "> " << player.getName() << " used Fake Out, but it failed!\n";
+                    playerAction = "> " + player.getName() + " used Fake Out, but it failed!";
+                    cout << playerAction << endl;
                 } else if (playerMove.getStatus() == FAIL_IF_HIT) {
-                    cout << "> " << player.getName() << " lost its focus and couldn't move!\n";
+                    playerAction = "> " + player.getName() + " lost its focus and couldn't move!";
+                    cout << playerAction << endl;
                 } else {
-                    cout << "> " << player.getName() << " used " << playerMove.getMoveName() << "!\n";
+                    playerAction = "> " + player.getName() + " used " + playerMove.getMoveName() + "!";
+                    cout << playerAction << endl;
                     enemy.takeDamage(playerMove.getDamage());
                 }
+                ActionStack(history, playerAction);
             } else if (playerFlinched) {
-                cout << "> " << player.getName() << " flinched and couldn't move!\n";
+                string flinchAction = "> " + player.getName() + " flinched and couldn't move!";
+                cout << flinchAction << endl;
+                ActionStack(history, flinchAction);
             }
         }
-
-        cout << string(15, '-') << "  Turn End  " << string(15, '-') << "\n\n";
         player.incrementTurn();
         enemy.incrementTurn();
         system("pause");
