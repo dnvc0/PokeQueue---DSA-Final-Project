@@ -8,6 +8,20 @@
 #include <conio.h>  
 using namespace std;
 
+bool readInteger(int &value) {
+    string line;
+    if (!getline(cin >> ws, line)) return false;
+    try {
+        size_t pos;
+        int result = stoi(line, &pos);
+        if (pos != line.size()) return false;
+        value = result;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 void clearScreen() {
     system("cls");
 }
@@ -163,9 +177,7 @@ void MoveQueue(Pokemon &player, Pokemon &enemy, Move &playerMove, Move &enemyMov
         cout << string(42, '-') << endl;
 
         int choice;
-        cin >> choice;
-
-        if (choice < 1 || choice > 4) {
+        if (!readInteger(choice) || choice < 1 || choice > 4) {
             cout << "Invalid move!\n";
             system("pause");
             continue;
@@ -285,8 +297,11 @@ void BattleSystem() {
     }
 
     int pChoice;
-    cin >> pChoice;
-    if(pChoice < 1 || pChoice > 4) pChoice = 1; // Default to Smeargle if invalid
+    if (!readInteger(pChoice) || pChoice < 1 || pChoice > 4) {
+        cout << "Invalid choice. Defaulting to Smeargle.\n";
+        system("pause");
+        pChoice = 1;
+    }
 
     Pokemon player = roster[pChoice - 1];
 
@@ -573,6 +588,7 @@ void searchMoveMenu() {
 
 int main() {
     srand(time(0));
+
     initRoster();
 
     cout << string(81, '=') << endl;
@@ -601,7 +617,11 @@ int main() {
         cout << "3. Move Dex" << endl;
         cout << "4. Exit game" << endl;
         int option;
-        cin >> option;
+        if (!readInteger(option)) {
+            cout << "Invalid option. Please enter a number between 1 and 4." << endl;
+            system("pause");
+            continue;
+        }
         switch (option) {
             case 1:
                 // yung six pokemon options dito ish-show
@@ -626,6 +646,7 @@ int main() {
                 return 0;
             default:
                 cout << "Invalid option. Please try again." << endl;
+                system("pause"); 
         }
     }
 
