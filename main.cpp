@@ -5,6 +5,7 @@
 #include <stack>
 #include <ctime>
 #include <string> 
+#include <limits>
 #include <conio.h>  
 using namespace std;
 
@@ -568,7 +569,6 @@ bool searchMove(const Pokemon &poke, string target, int index = 0) {
 void searchMoveMenu() {
     clearScreen();
     cout << "Enter move name to search: ";
-    cin.ignore();
     string target;
     getline(cin, target);
 
