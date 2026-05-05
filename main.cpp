@@ -184,12 +184,8 @@ void MoveQueue(Pokemon &player, Pokemon &enemy, Move &playerMove, Move &enemyMov
         }
 
         playerMove = player.getMove(choice - 1);
-        if (playerMove.getMoveName() == "Fake Out" && player.getTurnCount() > 0) {
-            cout << "> " + player.getName() + " used Fake Out, but it failed!" << endl;
-            system("pause");
-            continue;
-        }
         enemyMove = enemy.getMove(rand() % 4);
+        break;
     }
 }
 
@@ -467,53 +463,37 @@ void BattleSystem() {
                     if (action.isPlayer) {
                         enemy.applyStatus(SLEEP, 2);
                         enemyCanMove = false;
-                        string msg = "> " + getEnemyDisplayName(player, enemy) + " fell asleep!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " fell asleep!" << endl;
                     } else {
                         player.applyStatus(SLEEP, 2);
                         playerCanMove = false;
-                        string msg = "> " + player.getName() + " fell asleep!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << player.getName() << " fell asleep!" << endl;
                     }
                 } else if (action.move.getStatus() == BURN && (rand() % 100 < action.move.getStatusChance())) {
                     if (action.isPlayer) {
                         enemy.applyStatus(BURN, 10);
-                        string msg = "> " + getEnemyDisplayName(player, enemy) + " was burned!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was burned!" << endl;
                     } else {
                         player.applyStatus(BURN, 10);
-                        string msg = "> " + player.getName() + " was burned!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << player.getName() << " was burned!" << endl;
                     }
                 } else if (action.move.getStatus() == POISON && (rand() % 100 < action.move.getStatusChance())) {
                     if (action.isPlayer) {
                         enemy.applyStatus(POISON, 10);
-                        string msg = "> " + getEnemyDisplayName(player, enemy) + " was poisoned!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was poisoned!" << endl;
                     } else {
                         player.applyStatus(POISON, 10);
-                        string msg = "> " + player.getName() + " was poisoned!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << player.getName() << " was poisoned!" << endl;
                     }
                 } else if (action.move.getStatus() == PARALYZE && (rand() % 100 < action.move.getStatusChance())) {
                     if (action.isPlayer) {
                         enemy.applyStatus(PARALYZE, 10);
                         enemyCanMove = false;
-                        string msg = "> " + getEnemyDisplayName(player, enemy) + " was paralyzed and can't move!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << getEnemyDisplayName(player, enemy) << " was paralyzed and can't move!" << endl;
                     } else {
                         player.applyStatus(PARALYZE, 10);
                         playerCanMove = false;
-                        string msg = "> " + player.getName() + " was paralyzed and can't move!";
-                        cout << msg << endl;
-                        ActionStack(history, msg);
+                        cout << "> " << player.getName() << " was paralyzed and can't move!" << endl;
                     }
                 }
             }
@@ -535,29 +515,21 @@ void BattleSystem() {
         if (player.getCurrentStatus() == BURN && player.getIsAlive()) {
             int burnDmg = player.getMaxHP() / 8;
             player.takeDamage(burnDmg);
-            string msg = "> " + player.getName() + " took " + to_string(burnDmg) + " damage from burn!";
-            cout << msg << endl;
-            ActionStack(history, msg);
+            cout << "> " << player.getName() << " took " << burnDmg << " damage from burn!" << endl;
         } else if (player.getCurrentStatus() == POISON && player.getIsAlive()) {
             int poisonDmg = player.getMaxHP() / 8;
             player.takeDamage(poisonDmg);
-            string msg = "> " + player.getName() + " took " + to_string(poisonDmg) + " damage from poison!";
-            cout << msg << endl;
-            ActionStack(history, msg);
+            cout << "> " << player.getName() << " took " << poisonDmg << " damage from poison!" << endl;
         }
 
         if (enemy.getCurrentStatus() == BURN && enemy.getIsAlive()) {
             int burnDmg = enemy.getMaxHP() / 8;
             enemy.takeDamage(burnDmg);
-            string msg = "> " + getEnemyDisplayName(player, enemy) + " took " + to_string(burnDmg) + " damage from burn!";
-            cout << msg << endl;
-            ActionStack(history, msg);
+            cout << "> " << getEnemyDisplayName(player, enemy) << " took " << burnDmg << " damage from burn!" << endl;
         } else if (enemy.getCurrentStatus() == POISON && enemy.getIsAlive()) {
             int poisonDmg = enemy.getMaxHP() / 8;
             enemy.takeDamage(poisonDmg);
-            string msg = "> " + getEnemyDisplayName(player, enemy) + " took " + to_string(poisonDmg) + " damage from poison!";
-            cout << msg << endl;
-            ActionStack(history, msg);
+            cout << "> " << getEnemyDisplayName(player, enemy) << " took " << poisonDmg << " damage from poison!" << endl;
         }
 
         cout << string(15, '-') << "  Turn End  " << string(15, '-') << "\n\n";
